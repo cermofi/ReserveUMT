@@ -53,10 +53,10 @@ if ($action === 'verify_code') {
     $pendingId = (int) ($_POST['pending_id'] ?? 0);
     $code = trim((string) ($_POST['code'] ?? ''));
     if ($pendingId <= 0 || $code === '') {
-        fail_json('Neplatn? k?d.');
+        fail_json('Neplatný kód.');
     }
     if (!rate_limit($db, 'verify_ip:' . $ip, 10, 3600)) {
-        fail_json('P??li? mnoho pokus?.');
+        fail_json('Příliš mnoho pokusů.');
     }
     $result = verify_pending_booking($db, $pendingId, $code, $ip);
     if (!$result['ok']) {

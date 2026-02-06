@@ -42,7 +42,7 @@ function csrf_token(): string {
 
 function require_csrf(): void {
     secure_session_start();
-    $token = $_POST['csrf'] ? $_SERVER['HTTP_X_CSRF_TOKEN'] ? '';
+    $token = $_POST['csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!is_string($token) || empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $token)) {
         fail_json('CSRF validation failed', 400);
     }
@@ -97,7 +97,7 @@ function rate_limit(PDO $db, string $key, int $limit, int $windowSec): bool {
 }
 
 function require_post(): void {
-    if (($_SERVER['REQUEST_METHOD'] ? '') !== 'POST') {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
         fail_json('POST required', 405);
     }
 }
@@ -117,7 +117,6 @@ function validate_email_addr(string $email): bool {
 function h(string $text): string {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
-
 
 function debug_log(string $message, array $context = []): void {
     if (!cfg('debug_log_enabled', false)) {
