@@ -314,12 +314,15 @@ input:focus, select:focus {
   display: grid;
   gap: 4px;
   box-shadow: none;
+  min-width: 0;
 }
 
 .booking-title {
   font-weight: 600;
   line-height: 1.2;
   word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .booking.small {
@@ -355,6 +358,7 @@ input:focus, select:focus {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .chip {
@@ -362,6 +366,10 @@ input:focus, select:focus {
   border-radius: 999px;
   font-size: 11px;
   background: rgba(15, 23, 42, 0.1);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cat-0 { background: color-mix(in srgb, var(--cat-0) 25%, transparent); border: 1px solid var(--cat-0); }

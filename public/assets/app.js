@@ -251,8 +251,9 @@
         item.style.height = `calc(${duration} * var(--px-per-min))`;
         const idx = categoryIndex(b.category || '');
         item.classList.add(`cat-${idx}`);
+        const displayName = (b.name && b.name.trim()) ? b.name : 'Rezervace';
         item.innerHTML = `
-          <div class="booking-title">${b.name}</div>
+          <div class="booking-title">${displayName}</div>
           <div class="chips">
             <span class="chip">${b.category}</span>
             <span class="chip">${spaceLabels[b.space] || b.space}</span>
