@@ -114,6 +114,12 @@ function list_bookings(PDO $db, int $from_ts, int $to_ts): array {
     return $stmt->fetchAll();
 }
 
+function list_bookings_admin(PDO $db, int $from_ts, int $to_ts): array {
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, email, category, space FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
+    $stmt->execute([$to_ts, $from_ts]);
+    return $stmt->fetchAll();
+}
+
 function list_recurring_occurrences(PDO $db, int $from_ts, int $to_ts): array {
     $from_midnight = midnight_ts($from_ts);
     $to_midnight = midnight_ts($to_ts);
@@ -385,6 +391,61 @@ function admin_delete_booking(PDO $db, int $id, string $ip): array {
     $stmt->execute([$id]);
     log_audit($db, 'admin_booking_deleted', 'admin', $ip, ['booking_id' => $id]);
     return ['ok' => true];
+}
+
+function admin_update_booking(PDO $db, int $id, array $data, string $ip): array {
+    $date = trim((string) ($data['date'] ?? ''));
+    $start = trim((string) ($data['start'] ?? ''));
+    $end = trim((string) ($data['end'] ?? ''));
+    $name = trim((string) ($data['name'] ?? ''));
+    $email = strtolower(trim((string) ($data['email'] ?? '')));
+    $category = trim((string) ($data['category'] ?? ''));
+    $space = trim((string) ($data['space'] ?? ''));
+
+    if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
+        return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
+    }
+    if ($name === '' || mb_strlen($name) > 80) {
+        return ['ok' => false, 'error' => 'Neplatné jméno.'];
+    }
+    if (!validate_email_addr($email)) {
+        return ['ok' => false, 'error' => 'Neplatný e-mail.'];
+    }
+    if (!in_array($category, CATEGORIES, true)) {
+        return ['ok' => false, 'error' => 'Neplatná kategorie.'];
+    }
+    if (!in_array($space, SPACES, true)) {
+        return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
+    }
+
+    $dtStart = dt_from_date_time($date, $start);
+    $dtEnd = dt_from_date_time($date, $end);
+    if (!$dtStart || !$dtEnd) {
+        return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
+    }
+    $start_ts = $dtStart->getTimestamp();
+    $end_ts = $dtEnd->getTimestamp();
+    if ($end_ts <= $start_ts) {
+        return ['ok' => false, 'error' => 'Konec musí být po začátku.'];
+    }
+
+    try {
+        $db->exec('BEGIN IMMEDIATE');
+        if (has_conflict($db, $start_ts, $end_ts, $space, $id)) {
+            $db->exec('COMMIT');
+            return ['ok' => false, 'error' => 'Termín je obsazený.'];
+        }
+        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, email = ?, category = ?, space = ? WHERE id = ?');
+        $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $id]);
+        $db->exec('COMMIT');
+        log_audit($db, 'admin_booking_updated', 'admin', $ip, ['booking_id' => $id]);
+        return ['ok' => true];
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->exec('ROLLBACK');
+        }
+        return ['ok' => false, 'error' => 'Chyba uložení.'];
+    }
 }
 
 function admin_create_recurring(PDO $db, array $data, string $ip): array {

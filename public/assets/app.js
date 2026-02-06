@@ -251,6 +251,16 @@
         `;
         item.addEventListener('click', (ev) => {
           ev.stopPropagation();
+          if (page === 'admin') {
+            if (String(b.id).startsWith('R')) {
+              if (confirm('Smazat tento výskyt opakované rezervace?')) {
+                deleteOccurrence(b.rule_id, b.date_ts);
+              }
+              return;
+            }
+            openEditModal(b);
+            return;
+          }
           showToast(`${b.name} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
         });
         track.appendChild(item);
@@ -361,6 +371,22 @@
     form.start.value = formatTime(start);
     form.end.value = formatTime(end);
     openModal('modal-reserve');
+  };
+
+  const openEditModal = (booking) => {
+    const form = document.getElementById('form-edit');
+    if (!form) return;
+    const start = new Date(booking.start_ts * 1000);
+    const end = new Date(booking.end_ts * 1000);
+    form.id.value = booking.id;
+    form.date.value = formatYmd(start);
+    form.start.value = formatTime(start);
+    form.end.value = formatTime(end);
+    form.name.value = booking.name || '';
+    if (form.email) form.email.value = booking.email || '';
+    form.category.value = booking.category || 'Jiné';
+    form.space.value = booking.space || 'WHOLE';
+    openModal('modal-edit');
   };
 
   const selectionTooltip = (() => {
@@ -711,6 +737,42 @@
         try {
           await adminPost({ action: 'clear_rate_limits' });
           showToast('Rate limit vyčištěn.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
+    const formEdit = document.getElementById('form-edit');
+    const btnDelete = document.getElementById('btn-delete-booking');
+    if (formEdit) {
+      formEdit.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = formEdit.querySelector('button[type=\"submit\"]');
+        setLoading(btn, true);
+        try {
+          const data = new URLSearchParams(new FormData(formEdit));
+          await fetchJson('/admin.php', { method: 'POST', body: data });
+          showToast('Rezervace upravena.');
+          closeModal('modal-edit');
+          loadWeek();
+        } catch (err) {
+          showToast(err.message);
+        } finally {
+          setLoading(btn, false);
+        }
+      });
+    }
+    if (btnDelete) {
+      btnDelete.addEventListener('click', async () => {
+        const id = formEdit?.id?.value;
+        if (!id) return;
+        if (!confirm('Opravdu smazat rezervaci?')) return;
+        try {
+          await adminPost({ action: 'delete_booking', id: String(id) });
+          showToast('Rezervace smazána.');
+          closeModal('modal-edit');
+          loadWeek();
         } catch (err) {
           showToast(err.message);
         }

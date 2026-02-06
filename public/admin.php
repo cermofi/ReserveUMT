@@ -65,6 +65,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
         respond_json(admin_delete_booking($db, $id, $ip));
     }
+    if ($action === 'update_booking') {
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            fail_json('Neplatné ID.');
+        }
+        $result = admin_update_booking($db, $id, $_POST, $ip);
+        if (!$result['ok']) {
+            fail_json($result['error']);
+        }
+        respond_json(['ok' => true]);
+    }
     if ($action === 'create_recurring') {
         $result = admin_create_recurring($db, $_POST, $ip);
         if (!$result['ok']) {
@@ -93,7 +104,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         if ($from <= 0 || $to <= 0 || $to <= $from) {
             fail_json('Invalid range');
         }
-        $bookings = list_bookings($db, $from, $to);
+        $bookings = list_bookings_admin($db, $from, $to);
         $recurring = list_recurring_occurrences($db, $from, $to);
         $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
         $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
@@ -124,7 +135,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 $tz = new DateTimeZone('Europe/Prague');
 $baseDate = new DateTimeImmutable('now', $tz);
 $weekStart = $baseDate->modify('monday this week')->setTime(0, 0);
-$weekLabel = $weekStart->format('o-\WW');
+$weekLabel = $weekStart->format('o-\\WW');
 $admin = is_admin();
 ?>
 <!doctype html>
@@ -219,8 +230,8 @@ $admin = is_admin();
             </form>
           </section>
 
-        <section class="panel">
-          <h2>Opakované rezervace</h2>
+          <section class="panel">
+            <h2>Opakované rezervace</h2>
             <form id="form-recurring" class="form">
               <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
               <input type="hidden" name="action" value="create_recurring" />
@@ -289,8 +300,10 @@ $admin = is_admin();
             <div id="week-label" class="week-label"></div>
             <button class="btn ghost" id="week-next">→</button>
           </div>
-          <h2>Rezervace v týdnu</h2>
-          <div id="admin-bookings" class="table"></div>
+          <h2>Kalendář rezervací</h2>
+          <div id="calendar" class="calendar"></div>
+          <div id="agenda" class="agenda"></div>
+          <div class="hint">Kliknutím na rezervaci ji upravíte nebo smažete.</div>
         </section>
 
         <section class="panel">
@@ -324,6 +337,66 @@ $admin = is_admin();
       <?php endif; ?>
     </main>
   </div>
+
+  <div class="modal" id="modal-edit" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Upravit rezervaci</div>
+        <button class="icon-btn" data-close="modal-edit" aria-label="Zavřít">×</button>
+      </div>
+      <form id="form-edit" class="form">
+        <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
+        <input type="hidden" name="action" value="update_booking" />
+        <input type="hidden" name="id" />
+        <div class="grid-2">
+          <label>
+            Datum
+            <input type="date" name="date" required />
+          </label>
+          <label>
+            Kategorie
+            <select name="category" required>
+              <?php foreach (CATEGORIES as $cat): ?>
+                <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <label>
+            Začátek
+            <input type="time" name="start" required />
+          </label>
+          <label>
+            Konec
+            <input type="time" name="end" required />
+          </label>
+          <label>
+            Prostor
+            <select name="space" required>
+              <option value="WHOLE">Celá UMT</option>
+              <option value="HALF_A"><?= h(space_label('HALF_A')) ?></option>
+              <option value="HALF_B"><?= h(space_label('HALF_B')) ?></option>
+            </select>
+          </label>
+          <label>
+            Jméno / tým
+            <input type="text" name="name" maxlength="80" required />
+          </label>
+        </div>
+        <label>
+          E-mail
+          <input type="email" name="email" required />
+        </label>
+        <div class="grid-2">
+          <button class="btn primary" type="submit">
+            <span class="btn-text">Uložit změny</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <button class="btn ghost" type="button" id="btn-delete-booking">Smazat rezervaci</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
   <script src="/assets/app.js" defer></script>
 </body>
