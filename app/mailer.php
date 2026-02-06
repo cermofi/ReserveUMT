@@ -41,8 +41,8 @@ function mailer_send(string $to, string $subject, string $body): bool {
 }
 
 function send_verification_email(string $email, string $code): bool {
-    $subject = 'Ověření rezervace UMT';
-    $body = "Váš ověřovací kód: {$code}\n\nPlatnost: 10 minut. Pokud jste žádost nevytvářeli, tento e-mail ignorujte.";
+    $subject = 'OvÄ›Ĺ™enĂ­ rezervace UMT';
+    $body = "VĂˇĹˇ ovÄ›Ĺ™ovacĂ­ kĂłd: {$code}\n\nPlatnost: 10 minut. Pokud jste ĹľĂˇdost nevytvĂˇĹ™eli, tento e-mail ignorujte.";
     return mailer_send($email, $subject, $body);
 }
 

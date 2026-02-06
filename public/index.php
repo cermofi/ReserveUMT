@@ -40,19 +40,19 @@ $weekLabel = $weekStart->format('o-\WW');
     <header class="topbar">
       <div class="brand">
         <div class="title">UMT Rozpis</div>
-        <div class="subtitle">Týdenní rozpis umělé trávy</div>
+        <div class="subtitle">TĂ˝dennĂ­ rozpis umÄ›lĂ© trĂˇvy</div>
       </div>
       <div class="actions">
-        <button class="btn" id="btn-new">Nová rezervace</button>
+        <button class="btn" id="btn-new">NovĂˇ rezervace</button>
         <a class="btn ghost" href="/admin.php">Administrace</a>
       </div>
     </header>
 
     <main class="content">
       <div class="week-controls">
-        <button class="btn ghost" id="week-prev">‹</button>
+        <button class="btn ghost" id="week-prev">â€ą</button>
         <div id="week-label" class="week-label"></div>
-        <button class="btn ghost" id="week-next">›</button>
+        <button class="btn ghost" id="week-next">â€ş</button>
       </div>
 
       <div id="calendar" class="calendar"></div>
@@ -63,8 +63,8 @@ $weekLabel = $weekStart->format('o-\WW');
   <div class="modal" id="modal-reserve" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Nová rezervace</div>
-        <button class="icon-btn" data-close="modal-reserve" aria-label="Zavřít">×</button>
+        <div class="modal-title">NovĂˇ rezervace</div>
+        <button class="icon-btn" data-close="modal-reserve" aria-label="ZavĹ™Ă­t">Ă—</button>
       </div>
       <form id="form-reserve" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
@@ -82,7 +82,7 @@ $weekLabel = $weekStart->format('o-\WW');
             </select>
           </label>
           <label>
-            Začátek
+            ZaÄŤĂˇtek
             <input type="time" name="start" required />
           </label>
           <label>
@@ -92,13 +92,13 @@ $weekLabel = $weekStart->format('o-\WW');
           <label>
             Prostor
             <select name="space" required>
-              <option value="WHOLE">Celá UMT</option>
+              <option value="WHOLE">CelĂˇ UMT</option>
               <option value="HALF_A"><?= h(space_label('HALF_A')) ?></option>
               <option value="HALF_B"><?= h(space_label('HALF_B')) ?></option>
             </select>
           </label>
           <label>
-            Jméno / tým
+            JmĂ©no / tĂ˝m
             <input type="text" name="name" maxlength="80" required />
           </label>
         </div>
@@ -106,9 +106,9 @@ $weekLabel = $weekStart->format('o-\WW');
           E-mail
           <input type="email" name="email" required />
         </label>
-        <div class="hint">Půlka A = levá část, Půlka B = pravá část. Popisky lze změnit v konfiguraci.</div>
+        <div class="hint">PĹŻlka A = levĂˇ ÄŤĂˇst, PĹŻlka B = pravĂˇ ÄŤĂˇst. Popisky lze zmÄ›nit v konfiguraci.</div>
         <button class="btn primary" type="submit">
-          <span class="btn-text">Odeslat žádost</span>
+          <span class="btn-text">Odeslat ĹľĂˇdost</span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
       </form>
@@ -118,17 +118,17 @@ $weekLabel = $weekStart->format('o-\WW');
   <div class="modal" id="modal-verify" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Ověření e-mailu</div>
-        <button class="icon-btn" data-close="modal-verify" aria-label="Zavřít">×</button>
+        <div class="modal-title">OvÄ›Ĺ™enĂ­ e-mailu</div>
+        <button class="icon-btn" data-close="modal-verify" aria-label="ZavĹ™Ă­t">Ă—</button>
       </div>
       <form id="form-verify" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
         <input type="hidden" name="pending_id" />
         <label>
-          Ověřovací kód
+          OvÄ›Ĺ™ovacĂ­ kĂłd
           <input type="text" name="code" inputmode="numeric" maxlength="6" required />
         </label>
-        <div class="hint">Zbývá <span id="verify-countdown">10:00</span></div>
+        <div class="hint">ZbĂ˝vĂˇ <span id="verify-countdown">10:00</span></div>
         <button class="btn primary" type="submit">
           <span class="btn-text">Potvrdit rezervaci</span>
           <span class="spinner" aria-hidden="true"></span>

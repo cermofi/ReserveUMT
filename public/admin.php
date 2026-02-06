@@ -18,12 +18,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'login') {
         if (!rate_limit($db, 'admin_login:' . $ip, 5, 900)) {
-            fail_json('Příliš mnoho pokusů.', 429);
+            fail_json('PĹ™Ă­liĹˇ mnoho pokusĹŻ.', 429);
         }
         $pass = (string) ($_POST['password'] ?? '');
         $hash = (string) cfg('admin_password_hash');
         if ($hash === '' || !password_verify($pass, $hash)) {
-            fail_json('Neplatné heslo.', 401);
+            fail_json('NeplatnĂ© heslo.', 401);
         }
         session_regenerate_id(true);
         $_SESSION['is_admin'] = true;
@@ -51,7 +51,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($action === 'delete_booking') {
         $id = (int) ($_POST['id'] ?? 0);
         if ($id <= 0) {
-            fail_json('Neplatné ID.');
+            fail_json('NeplatnĂ© ID.');
         }
         respond_json(admin_delete_booking($db, $id, $ip));
     }
@@ -65,7 +65,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($action === 'delete_recurring') {
         $ruleId = (int) ($_POST['rule_id'] ?? 0);
         if ($ruleId <= 0) {
-            fail_json('Neplatné ID.');
+            fail_json('NeplatnĂ© ID.');
         }
         respond_json(admin_delete_recurring($db, $ruleId, $ip));
     }
@@ -73,7 +73,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $ruleId = (int) ($_POST['rule_id'] ?? 0);
         $dateTs = (int) ($_POST['date_ts'] ?? 0);
         if ($ruleId <= 0 || $dateTs <= 0) {
-            fail_json('Neplatné data.');
+            fail_json('NeplatnĂ© data.');
         }
         respond_json(admin_delete_occurrence($db, $ruleId, $dateTs, $ip));
     }
@@ -113,12 +113,12 @@ $admin = is_admin();
     <header class="topbar">
       <div class="brand">
         <div class="title">Administrace</div>
-        <div class="subtitle">Správa rezervací UMT</div>
+        <div class="subtitle">SprĂˇva rezervacĂ­ UMT</div>
       </div>
       <div class="actions">
-        <a class="btn ghost" href="/">Zpět na rozpis</a>
+        <a class="btn ghost" href="/">ZpÄ›t na rozpis</a>
         <?php if ($admin): ?>
-          <button class="btn" id="btn-logout">Odhlásit</button>
+          <button class="btn" id="btn-logout">OdhlĂˇsit</button>
         <?php endif; ?>
       </div>
     </header>
@@ -126,15 +126,15 @@ $admin = is_admin();
     <main class="content">
       <?php if (!$admin): ?>
         <div class="panel narrow">
-          <h2>Přihlášení</h2>
+          <h2>PĹ™ihlĂˇĹˇenĂ­</h2>
           <form id="form-login" class="form">
             <input type="hidden" name="action" value="login" />
             <label>
-              Heslo administrátora
+              Heslo administrĂˇtora
               <input type="password" name="password" required />
             </label>
             <button class="btn primary" type="submit">
-              <span class="btn-text">Přihlásit</span>
+              <span class="btn-text">PĹ™ihlĂˇsit</span>
               <span class="spinner" aria-hidden="true"></span>
             </button>
           </form>
@@ -142,7 +142,7 @@ $admin = is_admin();
       <?php else: ?>
         <div class="grid-admin">
           <section class="panel">
-            <h2>Vytvořit rezervaci</h2>
+            <h2>VytvoĹ™it rezervaci</h2>
             <form id="form-admin-book" class="form">
               <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
               <input type="hidden" name="action" value="create_booking" />
@@ -160,7 +160,7 @@ $admin = is_admin();
                   </select>
                 </label>
                 <label>
-                  Začátek
+                  ZaÄŤĂˇtek
                   <input type="time" name="start" required />
                 </label>
                 <label>
@@ -170,35 +170,35 @@ $admin = is_admin();
                 <label>
                   Prostor
                   <select name="space" required>
-                    <option value="WHOLE">Celá UMT</option>
+                    <option value="WHOLE">CelĂˇ UMT</option>
                     <option value="HALF_A"><?= h(space_label('HALF_A')) ?></option>
                     <option value="HALF_B"><?= h(space_label('HALF_B')) ?></option>
                   </select>
                 </label>
                 <label>
-                  Jméno / tým
+                  JmĂ©no / tĂ˝m
                   <input type="text" name="name" maxlength="80" required />
                 </label>
               </div>
               <label>
-                E-mail (nebude veřejný)
+                E-mail (nebude veĹ™ejnĂ˝)
                 <input type="email" name="email" required />
               </label>
               <button class="btn primary" type="submit">
-                <span class="btn-text">Uložit</span>
+                <span class="btn-text">UloĹľit</span>
                 <span class="spinner" aria-hidden="true"></span>
               </button>
             </form>
           </section>
 
           <section class="panel">
-            <h2>Opakované rezervace</h2>
+            <h2>OpakovanĂ© rezervace</h2>
             <form id="form-recurring" class="form">
               <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
               <input type="hidden" name="action" value="create_recurring" />
               <div class="grid-2">
                 <label>
-                  Název
+                  NĂˇzev
                   <input type="text" name="title" maxlength="80" required />
                 </label>
                 <label>
@@ -210,27 +210,27 @@ $admin = is_admin();
                   </select>
                 </label>
                 <label>
-                  Den v týdnu
+                  Den v tĂ˝dnu
                   <select name="dow" required>
-                    <option value="1">Pondělí</option>
-                    <option value="2">Úterý</option>
-                    <option value="3">Středa</option>
-                    <option value="4">Čtvrtek</option>
-                    <option value="5">Pátek</option>
+                    <option value="1">PondÄ›lĂ­</option>
+                    <option value="2">ĂšterĂ˝</option>
+                    <option value="3">StĹ™eda</option>
+                    <option value="4">ÄŚtvrtek</option>
+                    <option value="5">PĂˇtek</option>
                     <option value="6">Sobota</option>
-                    <option value="7">Neděle</option>
+                    <option value="7">NedÄ›le</option>
                   </select>
                 </label>
                 <label>
                   Prostor
                   <select name="space" required>
-                    <option value="WHOLE">Celá UMT</option>
+                    <option value="WHOLE">CelĂˇ UMT</option>
                     <option value="HALF_A"><?= h(space_label('HALF_A')) ?></option>
                     <option value="HALF_B"><?= h(space_label('HALF_B')) ?></option>
                   </select>
                 </label>
                 <label>
-                  Začátek
+                  ZaÄŤĂˇtek
                   <input type="time" name="start" required />
                 </label>
                 <label>
@@ -247,7 +247,7 @@ $admin = is_admin();
                 </label>
               </div>
               <button class="btn primary" type="submit">
-                <span class="btn-text">Vytvořit</span>
+                <span class="btn-text">VytvoĹ™it</span>
                 <span class="spinner" aria-hidden="true"></span>
               </button>
             </form>
@@ -256,16 +256,16 @@ $admin = is_admin();
 
         <section class="panel">
           <div class="week-controls">
-            <button class="btn ghost" id="week-prev">‹</button>
+            <button class="btn ghost" id="week-prev">â€ą</button>
             <div id="week-label" class="week-label"></div>
-            <button class="btn ghost" id="week-next">›</button>
+            <button class="btn ghost" id="week-next">â€ş</button>
           </div>
-          <h2>Rezervace v týdnu</h2>
+          <h2>Rezervace v tĂ˝dnu</h2>
           <div id="admin-bookings" class="table"></div>
         </section>
 
         <section class="panel">
-          <h2>Opakování</h2>
+          <h2>OpakovĂˇnĂ­</h2>
           <div id="admin-rules" class="table"></div>
         </section>
 
