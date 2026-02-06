@@ -457,6 +457,20 @@
     };
 
     if (formReserve) {
+      formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.timeAdjust;
+          const delta = parseInt(btn.dataset.delta || '0', 10);
+          const input = formReserve.querySelector(`input[name="${field}"]`);
+          if (!input || !input.value) return;
+          const current = parseHm(input.value);
+          const next = Math.max(0, Math.min(24 * 60 - stepMin, current + delta));
+          input.value = minutesToTime(next);
+          const event = new Event('change', { bubbles: true });
+          input.dispatchEvent(event);
+        });
+      });
+
       formReserve.start.addEventListener('change', updateDurationWarning);
       formReserve.end.addEventListener('change', updateDurationWarning);
       formReserve.addEventListener('submit', async (e) => {

@@ -76,11 +76,19 @@ $weekLabel = $weekStart->format('o-\WW');
           </label>
           <label>
             Začátek
-            <input type="time" name="start" required />
+            <div class="time-row">
+              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
+              <input type="time" name="start" required />
+              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
+            </div>
           </label>
           <label>
             Konec
-            <input type="time" name="end" required />
+            <div class="time-row">
+              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
+              <input type="time" name="end" required />
+              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
+            </div>
           </label>
           <div class="hint">Maximální délka veřejné rezervace je 2 hodiny.</div>
           <div class="warning" id="duration-warning" aria-live="polite"></div>
