@@ -27,6 +27,10 @@ function mailer_send(string $to, string $subject, string $body): bool {
             $mail->Body = $body;
             return $mail->send();
         } catch (Throwable $e) {
+            debug_log('smtp_error', [
+                'type' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
             return false;
         }
     }
@@ -34,14 +38,24 @@ function mailer_send(string $to, string $subject, string $body): bool {
     if (!empty($smtp['from_email'])) {
         $headers = "From: " . $smtp['from_name'] . " <" . $smtp['from_email'] . ">\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        return @mail($to, $subject, $body, $headers);
+        $ok = @mail($to, $subject, $body, $headers);
+        if (!$ok) {
+            debug_log('mail_error', [
+                'to' => $to,
+                'subject' => $subject,
+            ]);
+        }
+        return $ok;
     }
 
+    debug_log('mail_config_missing', [
+        'to' => $to,
+    ]);
     return false;
 }
 
 function send_verification_email(string $email, string $code): bool {
-    $subject = 'OvÄ›Ĺ™enĂ­ rezervace UMT';
-    $body = "VĂˇĹˇ ovÄ›Ĺ™ovacĂ­ kĂłd: {$code}\n\nPlatnost: 10 minut. Pokud jste ĹľĂˇdost nevytvĂˇĹ™eli, tento e-mail ignorujte.";
+    $subject = 'Ověření rezervace UMT';
+    $body = "Váš ověřovací kód: {$code}\n\nPlatnost: 10 minut. Pokud jste žádost nevytvářeli, tento e-mail ignorujte.";
     return mailer_send($email, $subject, $body);
 }
