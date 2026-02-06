@@ -404,7 +404,6 @@
     const next = document.getElementById('week-next');
     const today = document.getElementById('week-today');
     const dateInput = document.getElementById('week-date');
-    const goBtn = document.getElementById('week-go');
 
     const syncDateInput = () => {
       if (!dateInput) return;
@@ -448,8 +447,7 @@
       loadWeek();
       syncDateInput();
     });
-    if (goBtn && dateInput) {
-      goBtn.addEventListener('click', () => jumpToDate(dateInput.value));
+    if (dateInput) {
       dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
     }
   };
