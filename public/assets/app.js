@@ -257,17 +257,47 @@
         const idx = categoryIndex(b.category || '');
         item.classList.add(`cat-${idx}`);
         const displayName = (b.name && b.name.trim()) ? b.name : 'Rezervace';
+        const head = document.createElement('div');
+        head.className = 'booking-head';
         const titleEl = document.createElement('div');
         titleEl.className = 'booking-title';
         titleEl.textContent = displayName;
-        const chips = document.createElement('div');
-        chips.className = 'chips';
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.textContent = spaceLabels[b.space] || b.space;
-        chips.appendChild(chip);
-        item.appendChild(titleEl);
-        item.appendChild(chips);
+        const spaceCompact = document.createElement('span');
+        spaceCompact.className = 'space-compact';
+        const spaceShort = b.space === 'WHOLE' ? 'UMT' : (b.space === 'HALF_A' ? 'A' : 'B');
+        spaceCompact.textContent = spaceShort;
+        head.appendChild(titleEl);
+        head.appendChild(spaceCompact);
+
+        const meta = document.createElement('div');
+        meta.className = 'booking-meta chips';
+        const catChip = document.createElement('span');
+        catChip.className = 'chip category';
+        catChip.textContent = b.category || '';
+        const spaceChip = document.createElement('span');
+        spaceChip.className = 'chip space';
+        spaceChip.textContent = spaceLabels[b.space] || b.space;
+        meta.appendChild(catChip);
+        meta.appendChild(spaceChip);
+
+        const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
+        item.title = `${displayName} — ${b.category || ''} — ${spaceLabels[b.space] || b.space} — ${timeLabel}`;
+
+        item.appendChild(head);
+        item.appendChild(meta);
+
+        // Compact mode for short height blocks
+        const applyCompact = () => {
+          const h = item.getBoundingClientRect().height || duration * (parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1);
+          if (h < 52) {
+            item.classList.add('compact');
+          } else {
+            item.classList.remove('compact');
+          }
+        };
+        // Defer to next frame after layout
+        requestAnimationFrame(applyCompact);
+
         item.addEventListener('click', (ev) => {
           ev.stopPropagation();
           if (page === 'admin') {
@@ -280,7 +310,7 @@
             openEditModal(b);
             return;
           }
-          showToast(`${b.name} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
+          showToast(`${displayName} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
         });
         track.appendChild(item);
       });

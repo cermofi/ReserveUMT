@@ -324,22 +324,36 @@ input:focus, select:focus {
   color: var(--text);
   font-size: 12px;
   overflow: hidden;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
   box-shadow: none;
+  min-width: 0;
+}
+
+.booking-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
 .booking-title {
   font-weight: 600;
   line-height: 1.2;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.space-compact {
+  display: none;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.3);
 }
 
 .booking.small {
@@ -384,6 +398,13 @@ input:focus, select:focus {
   min-width: 0;
 }
 
+.booking-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 .chip {
   padding: 2px 8px;
   border-radius: 999px;
@@ -393,6 +414,15 @@ input:focus, select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.booking.compact .booking-meta {
+  display: none;
+}
+
+.booking.compact .space-compact {
+  display: inline-flex;
+  align-items: center;
 }
 
 .cat-0 { background: color-mix(in srgb, var(--cat-0) 25%, transparent); border: 1px solid var(--cat-0); }
