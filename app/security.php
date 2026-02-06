@@ -124,11 +124,47 @@ function debug_log(string $message, array $context = []): void {
         return;
     }
     $path = (string) cfg('debug_log_path', __DIR__ . '/../data/debug.log');
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0750, true);
+    }
     $entry = [
         'ts' => time(),
         'message' => $message,
         'context' => $context,
     ];
     $line = json_encode($entry, JSON_UNESCAPED_UNICODE) . "\n";
-    @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+    $ok = @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+    if ($ok === false) {
+        error_log('debug_log_write_failed: ' . $path);
+    }
+}
+
+function init_api_error_handler(): void {
+    set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+
+    set_exception_handler(function (Throwable $e): void {
+        debug_log('exception', [
+            'type' => get_class($e),
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
+        if (!headers_sent()) {
+            respond_json(['ok' => false, 'error' => 'Server error'], 500);
+        }
+        exit;
+    });
+
+    register_shutdown_function(function (): void {
+        $err = error_get_last();
+        if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            debug_log('fatal', $err);
+            if (!headers_sent()) {
+                respond_json(['ok' => false, 'error' => 'Server error'], 500);
+            }
+        }
+    });
 }

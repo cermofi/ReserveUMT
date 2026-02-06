@@ -6,10 +6,16 @@ require_once __DIR__ . '/../app/security.php';
 require_once __DIR__ . '/../app/bookings.php';
 
 send_security_headers();
+init_api_error_handler();
 $db = db();
 migrate($db);
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+debug_log('api_request', [
+    'action' => $action,
+    'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+]);
 
 if ($action === 'list') {
     $from = (int) ($_GET['from'] ?? 0);
@@ -42,10 +48,10 @@ if ($action === 'verify_code') {
     $pendingId = (int) ($_POST['pending_id'] ?? 0);
     $code = trim((string) ($_POST['code'] ?? ''));
     if ($pendingId <= 0 || $code === '') {
-        fail_json('NeplatnĂ˝ kĂłd.');
+        fail_json('NeplatnÄ‚Ëť kÄ‚Ĺ‚d.');
     }
     if (!rate_limit($db, 'verify_ip:' . $ip, 10, 3600)) {
-        fail_json('PĹ™Ă­liĹˇ mnoho pokusĹŻ.');
+        fail_json('PÄąâ„˘Ä‚Â­liÄąË‡ mnoho pokusÄąĹ».');
     }
     $result = verify_pending_booking($db, $pendingId, $code, $ip);
     if (!$result['ok']) {
