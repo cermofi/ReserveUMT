@@ -265,6 +265,31 @@ input:focus, select:focus {
   background-size: 100% calc(var(--px-per-min) * 30), 100% 100%;
 }
 
+.selection-box {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.selection-tooltip {
+  position: fixed;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  z-index: 40;
+  display: none;
+}
+
 .booking {
   position: absolute;
   border-radius: 12px;

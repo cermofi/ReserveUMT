@@ -148,8 +148,72 @@
       track.style.setProperty('--total-minutes', totalMinutes);
       track.dataset.date = ymd;
 
+      let dragActive = false;
+      let dragStartY = 0;
+      let selectionEl = null;
+
+      const updateSelection = (clientY) => {
+        const rect = track.getBoundingClientRect();
+        const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
+        const y1 = Math.max(0, Math.min(rect.height, dragStartY));
+        const y2 = Math.max(0, Math.min(rect.height, clientY - rect.top));
+        const top = Math.min(y1, y2);
+        const height = Math.max(6, Math.abs(y2 - y1));
+        if (selectionEl) {
+          selectionEl.style.top = `${top}px`;
+          selectionEl.style.height = `${height}px`;
+        }
+        const startOffset = Math.round(top / pxPerMin / stepMin) * stepMin;
+        const endOffset = Math.round((top + height) / pxPerMin / stepMin) * stepMin;
+        const start = startMin + startOffset;
+        const end = Math.max(start + stepMin, startMin + endOffset);
+        selectionTooltip.textContent = `${minutesToTime(start)} – ${minutesToTime(end)}`;
+        selectionTooltip.style.left = `${rect.right + 12}px`;
+        selectionTooltip.style.top = `${Math.min(window.innerHeight - 30, rect.top + top)}px`;
+        selectionTooltip.style.display = 'block';
+        return { start, end };
+      };
+
+      const endDrag = (clientY) => {
+        if (!dragActive) return;
+        dragActive = false;
+        const result = updateSelection(clientY);
+        if (selectionEl) {
+          selectionEl.remove();
+          selectionEl = null;
+        }
+        selectionTooltip.style.display = 'none';
+        if (page !== 'public') return;
+        if (result) {
+          openReservationModal(ymd, result.start, result.end);
+        }
+      };
+
+      track.addEventListener('mousedown', (e) => {
+        if (page !== 'public') return;
+        if (e.button !== 0) return;
+        if (e.target && e.target.classList.contains('booking')) return;
+        dragActive = true;
+        dragStartY = e.clientY - track.getBoundingClientRect().top;
+        selectionEl = document.createElement('div');
+        selectionEl.className = 'selection-box';
+        track.appendChild(selectionEl);
+        updateSelection(e.clientY);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!dragActive) return;
+        updateSelection(e.clientY);
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (!dragActive) return;
+        endDrag(e.clientY);
+      });
+
       track.addEventListener('click', (e) => {
         if (page !== 'public') return;
+        if (dragActive) return;
         const rect = track.getBoundingClientRect();
         const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
         const offset = e.clientY - rect.top;
@@ -298,6 +362,13 @@
     form.end.value = formatTime(end);
     openModal('modal-reserve');
   };
+
+  const selectionTooltip = (() => {
+    const el = document.createElement('div');
+    el.className = 'selection-tooltip';
+    document.body.appendChild(el);
+    return el;
+  })();
 
   const initPublicForms = () => {
     const btnNew = document.getElementById('btn-new');
