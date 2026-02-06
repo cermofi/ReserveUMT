@@ -94,7 +94,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $ruleId = (int) ($_POST['rule_id'] ?? 0);
         $dateTs = (int) ($_POST['date_ts'] ?? 0);
         if ($ruleId <= 0 || $dateTs <= 0) {
-            fail_json('Neplatné data.');
+            fail_json('Neplatná data.');
         }
         respond_json(admin_delete_occurrence($db, $ruleId, $dateTs, $ip));
     }
@@ -109,7 +109,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
         $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
         $requireVerify = get_setting($db, 'require_email_verification', '1');
-        respond_json(['ok' => true, 'bookings' => $bookings, 'recurring' => $recurring, 'rules' => $rules, 'audit' => $audit, 'require_email_verification' => $requireVerify]);
+        respond_json([
+            'ok' => true,
+            'bookings' => $bookings,
+            'recurring' => $recurring,
+            'rules' => $rules,
+            'audit' => $audit,
+            'require_email_verification' => $requireVerify,
+        ]);
     }
 
     if ($action === 'set_setting') {
@@ -135,7 +142,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 $tz = new DateTimeZone('Europe/Prague');
 $baseDate = new DateTimeImmutable('now', $tz);
 $weekStart = $baseDate->modify('monday this week')->setTime(0, 0);
-$weekLabel = $weekStart->format('o-\\WW');
+$weekLabel = $weekStart->format('o-\WW');
 $admin = is_admin();
 ?>
 <!doctype html>

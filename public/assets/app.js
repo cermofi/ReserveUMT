@@ -88,6 +88,9 @@
   });
 
   const fetchJson = async (url, options = {}) => {
+    if (!options.credentials) {
+      options.credentials = 'same-origin';
+    }
     const res = await fetch(url, options);
     const data = await res.json();
     if (!data.ok) {

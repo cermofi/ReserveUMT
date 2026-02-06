@@ -37,13 +37,36 @@ function csrf_token(): string {
     if (empty($_SESSION['csrf'])) {
         $_SESSION['csrf'] = bin2hex(random_bytes(32));
     }
-    return $_SESSION['csrf'];
+    $token = $_SESSION['csrf'];
+    $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    setcookie('csrf_token', $token, [
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => $secure,
+        'httponly' => false,
+        'samesite' => 'Strict',
+    ]);
+    return $token;
 }
 
 function require_csrf(): void {
     secure_session_start();
     $token = $_POST['csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!is_string($token) || empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $token)) {
+    $sessionToken = $_SESSION['csrf'] ?? '';
+    $cookieToken = $_COOKIE['csrf_token'] ?? '';
+    $valid = is_string($token) && $token !== '' && (
+        ($sessionToken !== '' && hash_equals($sessionToken, $token)) ||
+        ($cookieToken !== '' && hash_equals($cookieToken, $token))
+    );
+    if (!$valid) {
+        debug_log('csrf_failed', [
+            'token_present' => $token !== '',
+            'session_id' => session_id(),
+            'session_token_present' => $sessionToken !== '',
+            'cookie_token_present' => $cookieToken !== '',
+            'path' => $_SERVER['REQUEST_URI'] ?? '',
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        ]);
         fail_json('CSRF validation failed', 400);
     }
 }
