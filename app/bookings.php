@@ -345,7 +345,7 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     if ($name === '' || mb_strlen($name) > 80) {
         return ['ok' => false, 'error' => 'Neplatné jméno.'];
     }
-    if (!validate_email_addr($email)) {
+    if ($email !== '' && !validate_email_addr($email)) {
         return ['ok' => false, 'error' => 'Neplatný e-mail.'];
     }
     if (!in_array($category, CATEGORIES, true)) {

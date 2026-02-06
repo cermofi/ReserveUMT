@@ -384,7 +384,7 @@ $admin = is_admin();
         </div>
         <label>
           E-mail
-          <input type="email" name="email" required />
+          <input type="email" name="email" />
         </label>
         <div class="grid-2">
           <button class="btn primary" type="submit">
