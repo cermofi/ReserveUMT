@@ -55,6 +55,11 @@ $weekLabel = $weekStart->format('o-\WW');
         <div id="week-label" class="week-label"></div>
         <button class="btn ghost" id="week-next">→</button>
       </div>
+      <div class="legend-split">
+        <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>
+        <span>B = <?= h(space_label('HALF_B')) ?> (vpravo)</span>
+        <span>CELÁ = celá UMT</span>
+      </div>
 
       <div id="calendar" class="calendar"></div>
       <div id="agenda" class="agenda"></div>

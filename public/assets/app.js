@@ -242,7 +242,8 @@
         return formatYmd(d) === ymd;
       }).forEach((b) => {
         const item = document.createElement('div');
-        item.className = `booking ${b.space === 'WHOLE' ? 'whole' : (b.space === 'HALF_A' ? 'half-a' : 'half-b')}`;
+        const spaceClass = b.space === 'WHOLE' ? 'space-whole' : (b.space === 'HALF_A' ? 'space-a' : 'space-b');
+        item.className = `booking ${spaceClass} ${b.space === 'WHOLE' ? 'whole' : (b.space === 'HALF_A' ? 'half-a' : 'half-b')}`;
         const startDate = new Date(b.start_ts * 1000);
         const endDate = new Date(b.end_ts * 1000);
         const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
@@ -271,17 +272,20 @@
 
         const meta = document.createElement('div');
         meta.className = 'booking-meta chips';
-        const catChip = document.createElement('span');
-        catChip.className = 'chip category';
-        catChip.textContent = b.category || '';
+        if (b.category) {
+          const catChip = document.createElement('span');
+          catChip.className = 'chip category';
+          catChip.textContent = b.category;
+          meta.appendChild(catChip);
+        }
         const spaceChip = document.createElement('span');
         spaceChip.className = 'chip space';
-        spaceChip.textContent = spaceLabels[b.space] || b.space;
-        meta.appendChild(catChip);
+        spaceChip.textContent = b.space === 'WHOLE' ? 'CELÁ' : (b.space === 'HALF_A' ? 'A' : 'B');
         meta.appendChild(spaceChip);
 
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
-        item.title = `${displayName} — ${b.category || ''} — ${spaceLabels[b.space] || b.space} — ${timeLabel}`;
+        item.title = `${displayName} — ${b.category || 'bez kategorie'} — ${spaceLabels[b.space] || b.space} — ${timeLabel}`;
+        item.setAttribute('tabindex', '0');
 
         item.appendChild(head);
         item.appendChild(meta);
@@ -311,6 +315,12 @@
             return;
           }
           showToast(`${displayName} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
+        });
+        item.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            item.click();
+          }
         });
         track.appendChild(item);
       });
