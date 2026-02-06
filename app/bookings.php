@@ -180,7 +180,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
     }
-    if ($name === '' || mb_strlen($name) > 80) {
+    if ($name !== '' && mb_strlen($name) > 80) {
         return ['ok' => false, 'error' => 'Neplatné jméno.'];
     }
     $requireVerify = get_setting($db, 'require_email_verification', '1') === '1';
@@ -342,7 +342,7 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
     }
-    if ($name === '' || mb_strlen($name) > 80) {
+    if ($name !== '' && mb_strlen($name) > 80) {
         return ['ok' => false, 'error' => 'Neplatné jméno.'];
     }
     if ($email !== '' && !validate_email_addr($email)) {

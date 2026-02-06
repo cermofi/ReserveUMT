@@ -216,7 +216,7 @@ $admin = is_admin();
                 </label>
                 <label>
                   Jméno / tým
-                  <input type="text" name="name" maxlength="80" required />
+                  <input type="text" name="name" maxlength="80" />
                 </label>
               </div>
               <label>
@@ -379,7 +379,7 @@ $admin = is_admin();
           </label>
           <label>
             Jméno / tým
-            <input type="text" name="name" maxlength="80" required />
+            <input type="text" name="name" maxlength="80" />
           </label>
         </div>
         <label>
