@@ -74,11 +74,18 @@ function migrate(PDO $db): void {
         details TEXT NOT NULL
     )");
 
+    $db->exec("CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    )");
+
     $db->exec("CREATE TABLE IF NOT EXISTS rate_limits (
         key TEXT PRIMARY KEY,
         window_start INTEGER NOT NULL,
         count INTEGER NOT NULL
     )");
+
+    $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
 
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_start_end ON bookings(start_ts, end_ts)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_space ON bookings(space)");

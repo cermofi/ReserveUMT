@@ -97,7 +97,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $recurring = list_recurring_occurrences($db, $from, $to);
         $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
         $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
-        respond_json(['ok' => true, 'bookings' => $bookings, 'recurring' => $recurring, 'rules' => $rules, 'audit' => $audit]);
+        $requireVerify = get_setting($db, 'require_email_verification', '1');
+        respond_json(['ok' => true, 'bookings' => $bookings, 'recurring' => $recurring, 'rules' => $rules, 'audit' => $audit, 'require_email_verification' => $requireVerify]);
+    }
+
+    if ($action === 'set_setting') {
+        $key = (string) ($_POST['key'] ?? '');
+        $value = (string) ($_POST['value'] ?? '');
+        if ($key !== 'require_email_verification' || !in_array($value, ['0', '1'], true)) {
+            fail_json('Neplatné nastavení.');
+        }
+        set_setting($db, $key, $value);
+        log_audit($db, 'admin_setting_updated', 'admin', $ip, ['key' => $key, 'value' => $value]);
+        respond_json(['ok' => true]);
     }
 
     fail_json('Unknown action', 400);
@@ -201,8 +213,8 @@ $admin = is_admin();
             </form>
           </section>
 
-          <section class="panel">
-            <h2>Opakované rezervace</h2>
+        <section class="panel">
+          <h2>Opakované rezervace</h2>
             <form id="form-recurring" class="form">
               <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
               <input type="hidden" name="action" value="create_recurring" />
@@ -273,6 +285,17 @@ $admin = is_admin();
           </div>
           <h2>Rezervace v týdnu</h2>
           <div id="admin-bookings" class="table"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Nastavení</h2>
+          <div class="form">
+            <label>
+              <input type="checkbox" id="toggle-verify" />
+              Vyžadovat ověření e-mailu u nové rezervace
+            </label>
+            <div class="hint">Pokud je vypnuto, rezervace se uloží okamžitě bez e-mailového kódu.</div>
+          </div>
         </section>
 
         <section class="panel">

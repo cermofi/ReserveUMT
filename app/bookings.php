@@ -11,6 +11,21 @@ function log_audit(PDO $db, string $action, string $actor, string $ip, array $de
     $stmt->execute([time(), $action, $actor, $ip, json_encode($details, JSON_UNESCAPED_UNICODE)]);
 }
 
+function get_setting(PDO $db, string $key, string $default): string {
+    $stmt = $db->prepare('SELECT value FROM settings WHERE key = ?');
+    $stmt->execute([$key]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return $default;
+    }
+    return (string) $row['value'];
+}
+
+function set_setting(PDO $db, string $key, string $value): void {
+    $stmt = $db->prepare('INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+    $stmt->execute([$key, $value]);
+}
+
 function dt_from_date_time(string $date, string $time): ?DateTimeImmutable {
     $tz = new DateTimeZone('Europe/Prague');
     $dt = DateTimeImmutable::createFromFormat('Y-m-d H:i', $date . ' ' . $time, $tz);
@@ -192,6 +207,33 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
 
     if (has_conflict($db, $start_ts, $end_ts, $space)) {
         return ['ok' => false, 'error' => 'Termín je obsazený.'];
+    }
+
+    $requireVerify = get_setting($db, 'require_email_verification', '1') === '1';
+    if (!$requireVerify) {
+        try {
+            $db->exec('BEGIN IMMEDIATE');
+            if (has_conflict($db, $start_ts, $end_ts, $space)) {
+                $db->exec('COMMIT');
+                return ['ok' => false, 'error' => 'Termín je obsazený.'];
+            }
+            $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, time(), $ip, 'CONFIRMED']);
+            $bookingId = (int) $db->lastInsertId();
+            $db->exec('COMMIT');
+            log_audit($db, 'booking_created_no_verify', 'public', $ip, [
+                'booking_id' => $bookingId,
+                'start_ts' => $start_ts,
+                'end_ts' => $end_ts,
+                'space' => $space,
+            ]);
+            return ['ok' => true, 'booking_id' => $bookingId];
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->exec('ROLLBACK');
+            }
+            return ['ok' => false, 'error' => 'Chyba uložení.'];
+        }
     }
 
     $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);

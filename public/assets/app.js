@@ -243,6 +243,10 @@
       renderCalendar(res.bookings, res.recurring);
       renderAgenda(res.bookings, res.recurring);
       renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
+      const toggle = document.getElementById('toggle-verify');
+      if (toggle) {
+        toggle.checked = String(res.require_email_verification || '1') === '1';
+      }
       return;
     }
     const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
@@ -313,6 +317,11 @@
             body: data
           });
           closeModal('modal-reserve');
+          if (res.booking_id) {
+            showToast('Rezervace byla uložena.');
+            await loadWeek();
+            return;
+          }
           const verifyForm = document.getElementById('form-verify');
           verifyForm.pending_id.value = res.pending_id;
           openModal('modal-verify');
@@ -550,6 +559,23 @@
           showToast(err.message);
         } finally {
           setLoading(btn, false);
+        }
+      });
+    }
+
+    const toggle = document.getElementById('toggle-verify');
+    if (toggle) {
+      toggle.addEventListener('change', async () => {
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'require_email_verification',
+            value: toggle.checked ? '1' : '0'
+          });
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+          toggle.checked = !toggle.checked;
         }
       });
     }

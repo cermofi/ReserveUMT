@@ -46,6 +46,9 @@ if ($action === 'request_booking') {
     if (!$result['ok']) {
         fail_json($result['error']);
     }
+    if (isset($result['booking_id'])) {
+        respond_json(['ok' => true, 'booking_id' => $result['booking_id']]);
+    }
     respond_json(['ok' => true, 'pending_id' => $result['pending_id'], 'expires_ts' => $result['expires_ts']]);
 }
 
