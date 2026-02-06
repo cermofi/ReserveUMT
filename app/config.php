@@ -15,8 +15,8 @@ $CONFIG = [
     'grid_start' => env('GRID_START', '06:00'),
     'grid_end' => env('GRID_END', '23:00'),
     'grid_step_min' => (int) env('GRID_STEP_MIN', '30'),
-    'space_label_a' => env('SPACE_LABEL_A', 'P?lka A'),
-    'space_label_b' => env('SPACE_LABEL_B', 'P?lka B'),
+    'space_label_a' => env('SPACE_LABEL_A', 'Půlka A'),
+    'space_label_b' => env('SPACE_LABEL_B', 'Půlka B'),
     'debug_log_enabled' => (bool) env('DEBUG_LOG_ENABLED', ''),
     'debug_log_path' => env('DEBUG_LOG_PATH', __DIR__ . '/../data/debug.log'),
     'smtp' => [
@@ -30,23 +30,23 @@ $CONFIG = [
     ],
 ];
 
-const CATEGORIES = ['MP', 'MD', 'S?', '?ci', 'Dorost', 'Mu?i', 'Jin?'];
+const CATEGORIES = ['MP', 'MD', 'SŽ', 'Žáci', 'Dorost', 'Muži', 'Jiné'];
 const SPACES = ['WHOLE', 'HALF_A', 'HALF_B'];
 
 function cfg(string $key, $default = null) {
     global $CONFIG;
-    return $CONFIG[$key] ? $default;
+    return $CONFIG[$key] ?? $default;
 }
 
 function space_label(string $space): string {
     if ($space === 'WHOLE') {
-        return 'Cel? UMT';
+        return 'Celá UMT';
     }
     if ($space === 'HALF_A') {
-        return (string) cfg('space_label_a', 'P?lka A');
+        return (string) cfg('space_label_a', 'Půlka A');
     }
     if ($space === 'HALF_B') {
-        return (string) cfg('space_label_b', 'P?lka B');
+        return (string) cfg('space_label_b', 'Půlka B');
     }
     return $space;
 }
