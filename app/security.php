@@ -40,7 +40,7 @@ function csrf_token(): string {
     $token = $_SESSION['csrf'];
     $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
     setcookie('csrf_token', $token, [
-        'lifetime' => 0,
+        'expires' => 0,
         'path' => '/',
         'secure' => $secure,
         'httponly' => false,
