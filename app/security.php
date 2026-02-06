@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
@@ -118,3 +118,17 @@ function h(string $text): string {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+
+function debug_log(string $message, array $context = []): void {
+    if (!cfg('debug_log_enabled', false)) {
+        return;
+    }
+    $path = (string) cfg('debug_log_path', __DIR__ . '/../data/debug.log');
+    $entry = [
+        'ts' => time(),
+        'message' => $message,
+        'context' => $context,
+    ];
+    $line = json_encode($entry, JSON_UNESCAPED_UNICODE) . "\n";
+    @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
+}

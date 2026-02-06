@@ -95,3 +95,13 @@ server {
 ## Poznámky k bezpečnosti
 Aplikace používá CSRF tokeny, rate limiting, transakční kontrolu konfliktů a hlavičky pro hardening. Vždy však zvažte doplňkové vrstvy ochrany (WAF, síťové limity, logování).
 
+
+### Debug log (volitelně)
+Nastavte:
+
+```text
+DEBUG_LOG_ENABLED=1
+DEBUG_LOG_PATH=/absolute/path/to/data/debug.log
+```
+
+Aplikace pak zapisuje JSON řádky do souboru (bez citlivých dat, pokud nepředáte do contextu).
