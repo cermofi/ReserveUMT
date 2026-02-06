@@ -45,4 +45,3 @@ function send_verification_email(string $email, string $code): bool {
     $body = "Váš ověřovací kód: {$code}\n\nPlatnost: 10 minut. Pokud jste žádost nevytvářeli, tento e-mail ignorujte.";
     return mailer_send($email, $subject, $body);
 }
-
