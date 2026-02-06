@@ -41,6 +41,7 @@ function migrate(PDO $db): void {
         email TEXT NOT NULL,
         category TEXT NOT NULL,
         space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
+        note TEXT NOT NULL DEFAULT '',
         created_ts INTEGER NOT NULL,
         created_ip TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'CONFIRMED'
@@ -54,6 +55,7 @@ function migrate(PDO $db): void {
         email TEXT,
         category TEXT,
         space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
+        note TEXT NOT NULL DEFAULT '',
         code_hash TEXT NOT NULL,
         code_expires_ts INTEGER NOT NULL,
         created_ts INTEGER NOT NULL,
@@ -109,6 +111,8 @@ function migrate(PDO $db): void {
     )");
 
     add_column_if_missing($db, 'bookings', 'edit_token', 'TEXT');
+    add_column_if_missing($db, 'bookings', 'note', "TEXT NOT NULL DEFAULT ''");
+    add_column_if_missing($db, 'pending_bookings', 'note', "TEXT NOT NULL DEFAULT ''");
 
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
 

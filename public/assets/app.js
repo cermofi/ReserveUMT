@@ -284,7 +284,8 @@
         meta.appendChild(spaceChip);
 
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
-        item.title = `${displayName} — ${b.category || 'bez kategorie'} — ${spaceLabels[b.space] || b.space} — ${timeLabel}`;
+        const notePart = b.note ? ` — ${b.note}` : '';
+        item.title = `${displayName} — ${b.category || 'bez kategorie'} — ${spaceLabels[b.space] || b.space} — ${timeLabel}${notePart}`;
         item.setAttribute('tabindex', '0');
 
         item.appendChild(head);
@@ -481,6 +482,7 @@
     if (form.email) form.email.value = booking.email || '';
     form.category.value = booking.category || 'Jiné';
     form.space.value = booking.space || 'WHOLE';
+    if (form.note) form.note.value = booking.note || '';
     openModal('modal-edit');
   };
 

@@ -110,6 +110,10 @@ $weekLabel = $weekStart->format('o-\WW');
             Jméno / tým
             <input type="text" name="name" maxlength="80" required />
           </label>
+          <label>
+            Poznámka (neveřejná)
+            <textarea name="note" rows="2" maxlength="500"></textarea>
+          </label>
         </div>
         <label id="field-email">
           E-mail

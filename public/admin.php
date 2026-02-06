@@ -225,6 +225,10 @@ $admin = is_admin();
                   Jméno / tým
                   <input type="text" name="name" maxlength="80" />
                 </label>
+                <label>
+                  Poznámka (neveřejná)
+                  <textarea name="note" rows="2" maxlength="500"></textarea>
+                </label>
               </div>
               <label>
                 E-mail (nebude veřejný)
@@ -387,6 +391,10 @@ $admin = is_admin();
           <label>
             Jméno / tým
             <input type="text" name="name" maxlength="80" />
+          </label>
+          <label>
+            Poznámka (neveřejná)
+            <textarea name="note" rows="2" maxlength="500"></textarea>
           </label>
         </div>
         <label>

@@ -109,13 +109,13 @@ function has_conflict(PDO $db, int $start_ts, int $end_ts, string $space, ?int $
 }
 
 function list_bookings(PDO $db, int $from_ts, int $to_ts): array {
-    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, category, space FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, category, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
     $stmt->execute([$to_ts, $from_ts]);
     return $stmt->fetchAll();
 }
 
 function list_bookings_admin(PDO $db, int $from_ts, int $to_ts): array {
-    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, email, category, space FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, email, category, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
     $stmt->execute([$to_ts, $from_ts]);
     return $stmt->fetchAll();
 }
@@ -264,6 +264,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $email = strtolower(trim((string) ($data['email'] ?? '')));
     $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
+    $note = trim((string) ($data['note'] ?? ''));
 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
@@ -288,6 +289,9 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
+    }
+    if (mb_strlen($note) > 500) {
+        return ['ok' => false, 'error' => 'Poznámka je příliš dlouhá (max 500 znaků).'];
     }
 
     $dtStart = dt_from_date_time($date, $start);
@@ -322,8 +326,8 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
                 $db->exec('COMMIT');
                 return ['ok' => false, 'error' => 'Termín je obsazený.'];
             }
-            $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, time(), $ip, 'CONFIRMED']);
+            $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, time(), $ip, 'CONFIRMED']);
             $bookingId = (int) $db->lastInsertId();
             $db->exec('COMMIT');
             log_audit($db, 'booking_created_no_verify', 'public', $ip, [
@@ -346,8 +350,8 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $codeHash = password_hash($code, PASSWORD_DEFAULT);
     $expires = time() + 600;
 
-    $stmt = $db->prepare('INSERT INTO pending_bookings(start_ts, end_ts, name, email, category, space, code_hash, code_expires_ts, created_ts, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $codeHash, $expires, time(), $ip]);
+    $stmt = $db->prepare('INSERT INTO pending_bookings(start_ts, end_ts, name, email, category, space, note, code_hash, code_expires_ts, created_ts, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, $codeHash, $expires, time(), $ip]);
     $pendingId = (int) $db->lastInsertId();
 
     if (!send_verification_email($email, $code)) {
@@ -398,8 +402,8 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
 
-        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $ins->execute([$start_ts, $end_ts, $pending['name'], $pending['email'], $pending['category'], $space, time(), $ip, 'CONFIRMED']);
+        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins->execute([$start_ts, $end_ts, $pending['name'], $pending['email'], $pending['category'], $space, $pending['note'], time(), $ip, 'CONFIRMED']);
         $bookingId = (int) $db->lastInsertId();
         $db->prepare('DELETE FROM pending_bookings WHERE id = ?')->execute([$pendingId]);
         $db->exec('COMMIT');
@@ -428,6 +432,7 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     $email = strtolower(trim((string) ($data['email'] ?? '')));
     $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
+    $note = trim((string) ($data['note'] ?? ''));
 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
@@ -443,6 +448,9 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
+    }
+    if (mb_strlen($note) > 500) {
+        return ['ok' => false, 'error' => 'Poznámka je příliš dlouhá (max 500 znaků).'];
     }
 
     $dtStart = dt_from_date_time($date, $start);
@@ -462,8 +470,8 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
             $db->exec('COMMIT');
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
-        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, time(), $ip, 'CONFIRMED']);
+        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, time(), $ip, 'CONFIRMED']);
         $bookingId = (int) $db->lastInsertId();
         $db->exec('COMMIT');
         log_audit($db, 'admin_booking_created', 'admin', $ip, ['booking_id' => $bookingId]);
@@ -492,6 +500,7 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
     $email = strtolower(trim((string) ($data['email'] ?? '')));
     $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
+    $note = trim((string) ($data['note'] ?? ''));
 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
@@ -507,6 +516,9 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
+    }
+    if (mb_strlen($note) > 500) {
+        return ['ok' => false, 'error' => 'Poznámka je příliš dlouhá (max 500 znaků).'];
     }
 
     $dtStart = dt_from_date_time($date, $start);
@@ -526,8 +538,8 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
             $db->exec('COMMIT');
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
-        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, email = ?, category = ?, space = ? WHERE id = ?');
-        $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $id]);
+        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, email = ?, category = ?, space = ?, note = ? WHERE id = ?');
+        $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, $id]);
         $db->exec('COMMIT');
         log_audit($db, 'admin_booking_updated', 'admin', $ip, ['booking_id' => $id]);
         return ['ok' => true];
