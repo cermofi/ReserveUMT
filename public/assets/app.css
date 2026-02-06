@@ -259,8 +259,10 @@ input:focus, select:focus {
 .day-track {
   position: relative;
   height: calc(var(--total-minutes) * var(--px-per-min));
-  background-image: linear-gradient(to bottom, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
-  background-size: 100% calc(var(--px-per-min) * 30);
+  background-image:
+    linear-gradient(to bottom, rgba(100, 116, 139, 0.1) 1px, transparent 1px),
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(100, 116, 139, 0.2) 50%, transparent calc(50% + 1px));
+  background-size: 100% calc(var(--px-per-min) * 30), 100% 100%;
 }
 
 .booking {
@@ -298,6 +300,7 @@ input:focus, select:focus {
 .booking.whole {
   left: 6px;
   right: 6px;
+  border: none;
 }
 
 .booking.half-a {
