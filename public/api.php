@@ -36,6 +36,11 @@ if ($action === 'list') {
     respond_json(['ok' => true, 'bookings' => $bookings, 'recurring' => $recurring]);
 }
 
+if ($action === 'settings') {
+    $requireVerify = get_setting($db, 'require_email_verification', '1');
+    respond_json(['ok' => true, 'require_email_verification' => $requireVerify]);
+}
+
 require_post();
 require_csrf();
 

@@ -103,7 +103,7 @@ $weekLabel = $weekStart->format('o-\WW');
             <input type="text" name="name" maxlength="80" required />
           </label>
         </div>
-        <label>
+        <label id="field-email">
           E-mail
           <input type="email" name="email" required />
         </label>

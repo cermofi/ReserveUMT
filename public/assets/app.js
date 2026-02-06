@@ -296,6 +296,8 @@
 
   const initPublicForms = () => {
     const btnNew = document.getElementById('btn-new');
+    const emailField = document.getElementById('field-email');
+    const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
     if (btnNew) {
       btnNew.addEventListener('click', () => openReservationModal(formatYmd(weekStart), parseHm(gridStart), parseHm(gridStart) + stepMin));
     }
@@ -303,6 +305,24 @@
     const formReserve = document.getElementById('form-reserve');
     const formVerify = document.getElementById('form-verify');
     let verifyTimer = null;
+
+    const applyVerifySetting = (requireVerify) => {
+      if (!emailField || !emailInput) return;
+      if (requireVerify) {
+        emailField.style.display = '';
+        emailInput.required = true;
+      } else {
+        emailField.style.display = 'none';
+        emailInput.required = false;
+        emailInput.value = '';
+      }
+    };
+
+    fetchJson('/api.php?action=settings')
+      .then((res) => applyVerifySetting(String(res.require_email_verification || '1') === '1'))
+      .catch(() => {
+        applyVerifySetting(true);
+      });
 
     if (formReserve) {
       formReserve.addEventListener('submit', async (e) => {

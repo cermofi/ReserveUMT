@@ -177,8 +177,15 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     if ($name === '' || mb_strlen($name) > 80) {
         return ['ok' => false, 'error' => 'Neplatné jméno.'];
     }
-    if (!validate_email_addr($email)) {
-        return ['ok' => false, 'error' => 'Neplatný e-mail.'];
+    $requireVerify = get_setting($db, 'require_email_verification', '1') === '1';
+    if ($requireVerify) {
+        if (!validate_email_addr($email)) {
+            return ['ok' => false, 'error' => 'Neplatný e-mail.'];
+        }
+    } else {
+        if ($email !== '' && !validate_email_addr($email)) {
+            return ['ok' => false, 'error' => 'Neplatný e-mail.'];
+        }
     }
     if (!in_array($category, CATEGORIES, true)) {
         return ['ok' => false, 'error' => 'Neplatná kategorie.'];
@@ -201,7 +208,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     if (!rate_limit($db, 'req_ip:' . $ip, 5, 3600)) {
         return ['ok' => false, 'error' => 'Příliš mnoho žádostí z této IP.'];
     }
-    if (!rate_limit($db, 'req_email:' . $email, 5, 3600)) {
+    if ($email !== '' && !rate_limit($db, 'req_email:' . $email, 5, 3600)) {
         return ['ok' => false, 'error' => 'Příliš mnoho žádostí pro tento e-mail.'];
     }
 
@@ -209,7 +216,6 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
         return ['ok' => false, 'error' => 'Termín je obsazený.'];
     }
 
-    $requireVerify = get_setting($db, 'require_email_verification', '1') === '1';
     if (!$requireVerify) {
         try {
             $db->exec('BEGIN IMMEDIATE');
