@@ -255,7 +255,6 @@
         item.innerHTML = `
           <div class="booking-title">${displayName}</div>
           <div class="chips">
-            <span class="chip">${b.category}</span>
             <span class="chip">${spaceLabels[b.space] || b.space}</span>
           </div>
         `;
@@ -299,11 +298,10 @@
       item.className = 'agenda-item';
       const start = new Date(b.start_ts * 1000);
       const end = new Date(b.end_ts * 1000);
-      item.innerHTML = `
+        item.innerHTML = `
         <div class="booking-title">${b.name}</div>
         <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)}</div>
         <div class="chips">
-          <span class="chip">${b.category}</span>
           <span class="chip">${spaceLabels[b.space] || b.space}</span>
         </div>
       `;
