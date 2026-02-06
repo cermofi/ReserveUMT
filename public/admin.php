@@ -112,6 +112,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         respond_json(['ok' => true]);
     }
 
+    if ($action === 'clear_rate_limits') {
+        $db->exec('DELETE FROM rate_limits');
+        log_audit($db, 'admin_rate_limits_cleared', 'admin', $ip, []);
+        respond_json(['ok' => true]);
+    }
+
     fail_json('Unknown action', 400);
 }
 
@@ -295,6 +301,14 @@ $admin = is_admin();
               Vyžadovat ověření e-mailu u nové rezervace
             </label>
             <div class="hint">Pokud je vypnuto, rezervace se uloží okamžitě bez e-mailového kódu.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Pokročilé</h2>
+          <div class="form">
+            <button class="btn ghost" id="btn-clear-rate">Vyčistit rate limit</button>
+            <div class="hint">Smaže všechna rate-limit omezení (např. „příliš mnoho pokusů“).</div>
           </div>
         </section>
 

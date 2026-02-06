@@ -633,6 +633,18 @@
         }
       });
     }
+
+    const clearRate = document.getElementById('btn-clear-rate');
+    if (clearRate) {
+      clearRate.addEventListener('click', async () => {
+        try {
+          await adminPost({ action: 'clear_rate_limits' });
+          showToast('Rate limit vyčištěn.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
   };
 
   wireWeekButtons();
