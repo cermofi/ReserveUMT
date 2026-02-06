@@ -194,7 +194,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
         }
     }
     if ($category === '') {
-        $category = 'Jiné';
+        $category = 'Soukromá';
     } elseif (!in_array($category, CATEGORIES, true)) {
         return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
