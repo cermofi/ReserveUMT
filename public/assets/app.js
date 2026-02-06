@@ -169,6 +169,11 @@
         const endDate = new Date(b.end_ts * 1000);
         const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
         const duration = (endDate - startDate) / 60000;
+        if (duration <= 30) {
+          item.classList.add('tiny');
+        } else if (duration <= 45) {
+          item.classList.add('small');
+        }
         item.style.top = `calc(${minutesFromStart} * var(--px-per-min))`;
         item.style.height = `calc(${duration} * var(--px-per-min))`;
         const idx = categoryIndex(b.category || '');
