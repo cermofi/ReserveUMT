@@ -187,7 +187,9 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
             return ['ok' => false, 'error' => 'Neplatný e-mail.'];
         }
     }
-    if (!in_array($category, CATEGORIES, true)) {
+    if ($category === '') {
+        $category = 'Jiné';
+    } elseif (!in_array($category, CATEGORIES, true)) {
         return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
@@ -203,6 +205,9 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $end_ts = $dtEnd->getTimestamp();
     if ($end_ts <= $start_ts) {
         return ['ok' => false, 'error' => 'Konec musí být po začátku.'];
+    }
+    if (($end_ts - $start_ts) > 7200) {
+        return ['ok' => false, 'error' => 'Maximální délka rezervace je 2 hodiny.'];
     }
 
     if (!rate_limit($db, 'req_ip:' . $ip, 5, 3600)) {

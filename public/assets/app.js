@@ -303,6 +303,7 @@
     const btnNew = document.getElementById('btn-new');
     const emailField = document.getElementById('field-email');
     const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
+    const durationWarning = document.getElementById('duration-warning');
     if (btnNew) {
       btnNew.addEventListener('click', () => openReservationModal(formatYmd(weekStart), parseHm(gridStart), parseHm(gridStart) + stepMin));
     }
@@ -329,9 +330,37 @@
         applyVerifySetting(true);
       });
 
+    const maxDurationMinutes = 120;
+    const updateDurationWarning = () => {
+      if (!formReserve || !durationWarning) return;
+      const start = formReserve.start.value;
+      const end = formReserve.end.value;
+      if (!start || !end) {
+        durationWarning.classList.remove('show');
+        durationWarning.textContent = '';
+        return;
+      }
+      const duration = parseHm(end) - parseHm(start);
+      if (duration > maxDurationMinutes) {
+        durationWarning.textContent = 'Délka rezervace přesahuje 2 hodiny.';
+        durationWarning.classList.add('show');
+      } else {
+        durationWarning.classList.remove('show');
+        durationWarning.textContent = '';
+      }
+    };
+
     if (formReserve) {
+      formReserve.start.addEventListener('change', updateDurationWarning);
+      formReserve.end.addEventListener('change', updateDurationWarning);
       formReserve.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const duration = parseHm(formReserve.end.value || '00:00') - parseHm(formReserve.start.value || '00:00');
+        if (duration > maxDurationMinutes) {
+          updateDurationWarning();
+          showToast('Maximální délka rezervace je 2 hodiny.');
+          return;
+        }
         const btn = formReserve.querySelector('button[type="submit"]');
         setLoading(btn, true);
         try {

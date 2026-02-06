@@ -75,14 +75,6 @@ $weekLabel = $weekStart->format('o-\WW');
             <input type="date" name="date" required />
           </label>
           <label>
-            Kategorie
-            <select name="category" required>
-              <?php foreach (CATEGORIES as $cat): ?>
-                <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </label>
-          <label>
             Začátek
             <input type="time" name="start" required />
           </label>
@@ -90,6 +82,8 @@ $weekLabel = $weekStart->format('o-\WW');
             Konec
             <input type="time" name="end" required />
           </label>
+          <div class="hint">Maximální délka veřejné rezervace je 2 hodiny.</div>
+          <div class="warning" id="duration-warning" aria-live="polite"></div>
           <label>
             Prostor
             <select name="space" required>
