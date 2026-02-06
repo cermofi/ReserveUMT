@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light dark;
   --bg: #f6f7f9;
   --panel: #ffffff;
@@ -426,3 +426,4 @@ button.loading .spinner {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+

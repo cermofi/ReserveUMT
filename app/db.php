@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
@@ -86,3 +86,4 @@ function migrate(PDO $db): void {
     $db->exec("CREATE INDEX IF NOT EXISTS idx_pending_email ON pending_bookings(email)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts)");
 }
+

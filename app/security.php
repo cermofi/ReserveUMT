@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
@@ -117,3 +117,4 @@ function validate_email_addr(string $email): bool {
 function h(string $text): string {
     return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+

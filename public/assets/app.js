@@ -1,4 +1,4 @@
-(() => {
+ï»¿(() => {
   const body = document.body;
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -7,9 +7,9 @@
   const gridEnd = body.dataset.gridEnd || '23:00';
   const stepMin = parseInt(body.dataset.stepMin || '30', 10);
   const spaceLabels = {
-    WHOLE: 'Celá UMT',
-    HALF_A: body.dataset.spaceLabelA || 'Pùlka A',
-    HALF_B: body.dataset.spaceLabelB || 'Pùlka B'
+    WHOLE: 'CelÃ¡ UMT',
+    HALF_A: body.dataset.spaceLabelA || 'PÅ¯lka A',
+    HALF_B: body.dataset.spaceLabelB || 'PÅ¯lka B'
   };
 
   const toastEl = document.getElementById('toast');
@@ -182,7 +182,7 @@
         `;
         item.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          showToast(`${b.name} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
+          showToast(`${b.name} Â· ${b.category} Â· ${spaceLabels[b.space] || b.space}`);
         });
         track.appendChild(item);
       });
@@ -202,7 +202,7 @@
     agenda.innerHTML = '';
     const all = [...bookings, ...recurring].sort((a, b) => a.start_ts - b.start_ts);
     if (!all.length) {
-      agenda.innerHTML = '<div class="panel">Žádné rezervace v tomto týdnu.</div>';
+      agenda.innerHTML = '<div class="panel">Å½Ã¡dnÃ© rezervace v tomto tÃ½dnu.</div>';
       return;
     }
     all.forEach((b) => {
@@ -212,7 +212,7 @@
       const end = new Date(b.end_ts * 1000);
       item.innerHTML = `
         <div class="booking-title">${b.name}</div>
-        <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)}</div>
+        <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}â€“${formatTime(end)}</div>
         <div class="chips">
           <span class="chip">${b.category}</span>
           <span class="chip">${spaceLabels[b.space] || b.space}</span>
@@ -227,7 +227,7 @@
     if (!label) return;
     const end = new Date(weekStart);
     end.setDate(weekStart.getDate() + 6);
-    label.textContent = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    label.textContent = `${weekStart.toLocaleDateString('cs-CZ')} â€“ ${end.toLocaleDateString('cs-CZ')}`;
   };
 
   const loadWeek = async () => {
@@ -306,7 +306,7 @@
           verifyForm.pending_id.value = res.pending_id;
           openModal('modal-verify');
           startCountdown(res.expires_ts);
-          showToast('Kód byl odeslán na e-mail.');
+          showToast('KÃ³d byl odeslÃ¡n na e-mail.');
         } catch (err) {
           showToast(err.message);
         } finally {
@@ -324,7 +324,7 @@
         if (label) label.textContent = `${m}:${s}`;
         if (remaining <= 0) {
           clearInterval(verifyTimer);
-          showToast('Kód vypršel.');
+          showToast('KÃ³d vyprÅ¡el.');
         }
       };
       if (verifyTimer) clearInterval(verifyTimer);
@@ -369,14 +369,14 @@
         row.innerHTML = `
           <div>
             <div><strong>${b.name}</strong> (${b.category})</div>
-            <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)} · ${spaceLabels[b.space] || b.space}</div>
+            <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}â€“${formatTime(end)} Â· ${spaceLabels[b.space] || b.space}</div>
           </div>
         `;
         const actions = document.createElement('div');
         if (String(b.id).startsWith('R')) {
           const btn = document.createElement('button');
           btn.className = 'btn ghost';
-          btn.textContent = 'Smazat výskyt';
+          btn.textContent = 'Smazat vÃ½skyt';
           btn.addEventListener('click', () => deleteOccurrence(b.rule_id, b.date_ts));
           actions.appendChild(btn);
         } else {
@@ -390,7 +390,7 @@
         bookingsEl.appendChild(row);
       });
       if (!all.length) {
-        bookingsEl.innerHTML = '<div class="hint">Žádné rezervace v týdnu.</div>';
+        bookingsEl.innerHTML = '<div class="hint">Å½Ã¡dnÃ© rezervace v tÃ½dnu.</div>';
       }
     }
 
@@ -403,18 +403,18 @@
         row.innerHTML = `
           <div>
             <div><strong>${r.title}</strong> (${r.category})</div>
-            <div class="meta">${r.dow}. den · ${spaceLabels[r.space] || r.space} · ${minutesToTime(r.start_min)}–${minutesToTime(r.end_min)}</div>
+            <div class="meta">${r.dow}. den Â· ${spaceLabels[r.space] || r.space} Â· ${minutesToTime(r.start_min)}â€“${minutesToTime(r.end_min)}</div>
           </div>
         `;
         const btn = document.createElement('button');
         btn.className = 'btn ghost';
-        btn.textContent = 'Smazat sérii';
+        btn.textContent = 'Smazat sÃ©rii';
         btn.addEventListener('click', () => deleteRecurring(r.id));
         row.appendChild(btn);
         rulesEl.appendChild(row);
       });
       if (!rules || !rules.length) {
-        rulesEl.innerHTML = '<div class="hint">Žádná opakování.</div>';
+        rulesEl.innerHTML = '<div class="hint">Å½Ã¡dnÃ¡ opakovÃ¡nÃ­.</div>';
       }
     }
 
@@ -447,7 +447,7 @@
   const deleteBooking = async (id) => {
     try {
       await adminPost({ action: 'delete_booking', id: String(id) });
-      showToast('Rezervace smazána.');
+      showToast('Rezervace smazÃ¡na.');
       loadWeek();
     } catch (err) {
       showToast(err.message);
@@ -457,7 +457,7 @@
   const deleteOccurrence = async (ruleId, dateTs) => {
     try {
       await adminPost({ action: 'delete_occurrence', rule_id: String(ruleId), date_ts: String(dateTs) });
-      showToast('Výskyt smazán.');
+      showToast('VÃ½skyt smazÃ¡n.');
       loadWeek();
     } catch (err) {
       showToast(err.message);
@@ -467,7 +467,7 @@
   const deleteRecurring = async (ruleId) => {
     try {
       await adminPost({ action: 'delete_recurring', rule_id: String(ruleId) });
-      showToast('Série smazána.');
+      showToast('SÃ©rie smazÃ¡na.');
       loadWeek();
     } catch (err) {
       showToast(err.message);
@@ -512,7 +512,7 @@
         try {
           const data = new URLSearchParams(new FormData(formAdminBook));
           await fetchJson('/admin.php', { method: 'POST', body: data });
-          showToast('Rezervace vytvoøena.');
+          showToast('Rezervace vytvoÅ™ena.');
           formAdminBook.reset();
           loadWeek();
         } catch (err) {
@@ -532,7 +532,7 @@
         try {
           const data = new URLSearchParams(new FormData(formRecurring));
           await fetchJson('/admin.php', { method: 'POST', body: data });
-          showToast('Opakování vytvoøeno.');
+          showToast('OpakovÃ¡nÃ­ vytvoÅ™eno.');
           formRecurring.reset();
           loadWeek();
         } catch (err) {
@@ -553,3 +553,4 @@
   }
   loadWeek();
 })();
+

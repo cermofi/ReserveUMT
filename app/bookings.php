@@ -1,4 +1,4 @@
-<?php
+Ôªø<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
@@ -157,41 +157,41 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $space = trim((string) ($data['space'] ?? ''));
 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum nebo Ëas.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum nebo ƒças.'];
     }
     if ($name === '' || mb_strlen($name) > 80) {
-        return ['ok' => false, 'error' => 'NeplatnÈ jmÈno.'];
+        return ['ok' => false, 'error' => 'Neplatn√© jm√©no.'];
     }
     if (!validate_email_addr($email)) {
-        return ['ok' => false, 'error' => 'Neplatn˝ e-mail.'];
+        return ['ok' => false, 'error' => 'Neplatn√Ω e-mail.'];
     }
     if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· kategorie.'];
+        return ['ok' => false, 'error' => 'Neplatn√° kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· volba prostoru.'];
+        return ['ok' => false, 'error' => 'Neplatn√° volba prostoru.'];
     }
 
     $dtStart = dt_from_date_time($date, $start);
     $dtEnd = dt_from_date_time($date, $end);
     if (!$dtStart || !$dtEnd) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum nebo Ëas.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum nebo ƒças.'];
     }
     $start_ts = $dtStart->getTimestamp();
     $end_ts = $dtEnd->getTimestamp();
     if ($end_ts <= $start_ts) {
-        return ['ok' => false, 'error' => 'Konec musÌ b˝t po zaË·tku.'];
+        return ['ok' => false, 'error' => 'Konec mus√≠ b√Ωt po zaƒç√°tku.'];
     }
 
     if (!rate_limit($db, 'req_ip:' . $ip, 5, 3600)) {
-        return ['ok' => false, 'error' => 'P¯Ìliö mnoho û·dostÌ z tÈto IP.'];
+        return ['ok' => false, 'error' => 'P≈ô√≠li≈° mnoho ≈æ√°dost√≠ z t√©to IP.'];
     }
     if (!rate_limit($db, 'req_email:' . $email, 5, 3600)) {
-        return ['ok' => false, 'error' => 'P¯Ìliö mnoho û·dostÌ pro tento e-mail.'];
+        return ['ok' => false, 'error' => 'P≈ô√≠li≈° mnoho ≈æ√°dost√≠ pro tento e-mail.'];
     }
 
     if (has_conflict($db, $start_ts, $end_ts, $space)) {
-        return ['ok' => false, 'error' => 'TermÌn je obsazen˝.'];
+        return ['ok' => false, 'error' => 'Term√≠n je obsazen√Ω.'];
     }
 
     $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -204,7 +204,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
 
     if (!send_verification_email($email, $code)) {
         $db->prepare('DELETE FROM pending_bookings WHERE id = ?')->execute([$pendingId]);
-        return ['ok' => false, 'error' => 'Nepoda¯ilo se odeslat e-mail.'];
+        return ['ok' => false, 'error' => 'Nepoda≈ôilo se odeslat e-mail.'];
     }
 
     log_audit($db, 'pending_created', 'public', $ip, [
@@ -225,21 +225,21 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
         $pending = $stmt->fetch();
         if (!$pending) {
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'é·dost nenalezena.'];
+            return ['ok' => false, 'error' => '≈Ω√°dost nenalezena.'];
         }
         if ((int) $pending['code_expires_ts'] < time()) {
             $db->prepare('DELETE FROM pending_bookings WHERE id = ?')->execute([$pendingId]);
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'KÛd vypröel.'];
+            return ['ok' => false, 'error' => 'K√≥d vypr≈°el.'];
         }
         if ((int) $pending['attempts'] >= 5) {
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'P¯Ìliö mnoho pokus˘.'];
+            return ['ok' => false, 'error' => 'P≈ô√≠li≈° mnoho pokus≈Ø.'];
         }
         if (!password_verify($code, $pending['code_hash'])) {
             $db->prepare('UPDATE pending_bookings SET attempts = attempts + 1 WHERE id = ?')->execute([$pendingId]);
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'Neplatn˝ kÛd.'];
+            return ['ok' => false, 'error' => 'Neplatn√Ω k√≥d.'];
         }
 
         $start_ts = (int) $pending['start_ts'];
@@ -247,7 +247,7 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
         $space = (string) $pending['space'];
         if (has_conflict($db, $start_ts, $end_ts, $space)) {
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'TermÌn je obsazen˝.'];
+            return ['ok' => false, 'error' => 'Term√≠n je obsazen√Ω.'];
         }
 
         $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
@@ -267,7 +267,7 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
         if ($db->inTransaction()) {
             $db->exec('ROLLBACK');
         }
-        return ['ok' => false, 'error' => 'Chyba potvrzenÌ.'];
+        return ['ok' => false, 'error' => 'Chyba potvrzen√≠.'];
     }
 }
 
@@ -281,37 +281,37 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     $space = trim((string) ($data['space'] ?? ''));
 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum nebo Ëas.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum nebo ƒças.'];
     }
     if ($name === '' || mb_strlen($name) > 80) {
-        return ['ok' => false, 'error' => 'NeplatnÈ jmÈno.'];
+        return ['ok' => false, 'error' => 'Neplatn√© jm√©no.'];
     }
     if (!validate_email_addr($email)) {
-        return ['ok' => false, 'error' => 'Neplatn˝ e-mail.'];
+        return ['ok' => false, 'error' => 'Neplatn√Ω e-mail.'];
     }
     if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· kategorie.'];
+        return ['ok' => false, 'error' => 'Neplatn√° kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· volba prostoru.'];
+        return ['ok' => false, 'error' => 'Neplatn√° volba prostoru.'];
     }
 
     $dtStart = dt_from_date_time($date, $start);
     $dtEnd = dt_from_date_time($date, $end);
     if (!$dtStart || !$dtEnd) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum nebo Ëas.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum nebo ƒças.'];
     }
     $start_ts = $dtStart->getTimestamp();
     $end_ts = $dtEnd->getTimestamp();
     if ($end_ts <= $start_ts) {
-        return ['ok' => false, 'error' => 'Konec musÌ b˝t po zaË·tku.'];
+        return ['ok' => false, 'error' => 'Konec mus√≠ b√Ωt po zaƒç√°tku.'];
     }
 
     try {
         $db->exec('BEGIN IMMEDIATE');
         if (has_conflict($db, $start_ts, $end_ts, $space)) {
             $db->exec('COMMIT');
-            return ['ok' => false, 'error' => 'TermÌn je obsazen˝.'];
+            return ['ok' => false, 'error' => 'Term√≠n je obsazen√Ω.'];
         }
         $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, time(), $ip, 'CONFIRMED']);
@@ -323,7 +323,7 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
         if ($db->inTransaction()) {
             $db->exec('ROLLBACK');
         }
-        return ['ok' => false, 'error' => 'Chyba uloûenÌ.'];
+        return ['ok' => false, 'error' => 'Chyba ulo≈æen√≠.'];
     }
 }
 
@@ -345,40 +345,40 @@ function admin_create_recurring(PDO $db, array $data, string $ip): array {
     $endDate = trim((string) ($data['end_date'] ?? ''));
 
     if ($title === '' || mb_strlen($title) > 80) {
-        return ['ok' => false, 'error' => 'Neplatn˝ n·zev.'];
+        return ['ok' => false, 'error' => 'Neplatn√Ω n√°zev.'];
     }
     if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· kategorie.'];
+        return ['ok' => false, 'error' => 'Neplatn√° kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
-        return ['ok' => false, 'error' => 'Neplatn· volba prostoru.'];
+        return ['ok' => false, 'error' => 'Neplatn√° volba prostoru.'];
     }
     if ($dow < 1 || $dow > 7) {
-        return ['ok' => false, 'error' => 'Neplatn˝ den v t˝dnu.'];
+        return ['ok' => false, 'error' => 'Neplatn√Ω den v t√Ωdnu.'];
     }
     if (!validate_time($start) || !validate_time($end)) {
-        return ['ok' => false, 'error' => 'Neplatn˝ Ëas.'];
+        return ['ok' => false, 'error' => 'Neplatn√Ω ƒças.'];
     }
     if (!validate_date($startDate) || !validate_date($endDate)) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum.'];
     }
     $startParts = explode(':', $start);
     $endParts = explode(':', $end);
     $startMin = ((int) $startParts[0]) * 60 + (int) $startParts[1];
     $endMin = ((int) $endParts[0]) * 60 + (int) $endParts[1];
     if ($endMin <= $startMin) {
-        return ['ok' => false, 'error' => 'Konec musÌ b˝t po zaË·tku.'];
+        return ['ok' => false, 'error' => 'Konec mus√≠ b√Ωt po zaƒç√°tku.'];
     }
     $tz = new DateTimeZone('Europe/Prague');
     $sd = DateTimeImmutable::createFromFormat('Y-m-d', $startDate, $tz);
     $ed = DateTimeImmutable::createFromFormat('Y-m-d', $endDate, $tz);
     if (!$sd || !$ed) {
-        return ['ok' => false, 'error' => 'NeplatnÈ datum.'];
+        return ['ok' => false, 'error' => 'Neplatn√© datum.'];
     }
     $startDateTs = $sd->setTime(0, 0)->getTimestamp();
     $endDateTs = $ed->setTime(0, 0)->getTimestamp();
     if ($endDateTs < $startDateTs) {
-        return ['ok' => false, 'error' => 'Konec obdobÌ musÌ b˝t po zaË·tku.'];
+        return ['ok' => false, 'error' => 'Konec obdob√≠ mus√≠ b√Ωt po zaƒç√°tku.'];
     }
 
     for ($day = $startDateTs; $day <= $endDateTs; $day += 86400) {
@@ -389,7 +389,7 @@ function admin_create_recurring(PDO $db, array $data, string $ip): array {
         $occStart = $day + $startMin * 60;
         $occEnd = $day + $endMin * 60;
         if (has_conflict($db, $occStart, $occEnd, $space)) {
-            return ['ok' => false, 'error' => 'Opakov·nÌ koliduje s existujÌcÌ rezervacÌ.'];
+            return ['ok' => false, 'error' => 'Opakov√°n√≠ koliduje s existuj√≠c√≠ rezervac√≠.'];
         }
     }
 
@@ -413,3 +413,4 @@ function admin_delete_occurrence(PDO $db, int $ruleId, int $dateTs, string $ip):
     log_audit($db, 'admin_occurrence_deleted', 'admin', $ip, ['rule_id' => $ruleId, 'date_ts' => $dateTs]);
     return ['ok' => true];
 }
+

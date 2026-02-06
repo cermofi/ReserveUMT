@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
@@ -41,7 +41,8 @@ function mailer_send(string $to, string $subject, string $body): bool {
 }
 
 function send_verification_email(string $email, string $code): bool {
-    $subject = 'Ovìøení rezervace UMT';
-    $body = "Váš ovìøovací kód: {$code}\n\nPlatnost: 10 minut. Pokud jste žádost nevytváøeli, tento e-mail ignorujte.";
+    $subject = 'OvÄ›Å™enÃ­ rezervace UMT';
+    $body = "VÃ¡Å¡ ovÄ›Å™ovacÃ­ kÃ³d: {$code}\n\nPlatnost: 10 minut. Pokud jste Å¾Ã¡dost nevytvÃ¡Å™eli, tento e-mail ignorujte.";
     return mailer_send($email, $subject, $body);
 }
+

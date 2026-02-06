@@ -1,38 +1,38 @@
-# UMT Rozpis (PHP + SQLite)
+ï»¿# UMT Rozpis (PHP + SQLite)
 
-Minimalistická webová aplikace pro rezervace umìlé trávy (UMT) s potvrzením e-mailu a administrací. Bez frameworkù.
+MinimalistickÃ¡ webovÃ¡ aplikace pro rezervace umÄ›lÃ© trÃ¡vy (UMT) s potvrzenÃ­m e-mailu a administracÃ­. Bez frameworkÅ¯.
 
-## Poadavky
+## PoÅ¾adavky
 - PHP 8.2+
 - SQLite3 extension
 - Composer (jen pokud chcete PHPMailer)
-- SMTP úèet pro odesílání e-mailù
+- SMTP ÃºÄet pro odesÃ­lÃ¡nÃ­ e-mailÅ¯
 
 ## Instalace
-1. Vytvoøte datovı adresáø mimo web root (v projektu je `data/` jako vıchozí).
-2. Nainstalujte závislosti (volitelné, doporuèeno):
+1. VytvoÅ™te datovÃ½ adresÃ¡Å™ mimo web root (v projektu je `data/` jako vÃ½chozÃ­).
+2. Nainstalujte zÃ¡vislosti (volitelnÃ©, doporuÄeno):
 
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
 
-3. Spuste migrace:
+3. SpusÅ¥te migrace:
 
 ```bash
 php scripts/migrate.php
 ```
 
-4. Vygenerujte hash hesla administrátora:
+4. Vygenerujte hash hesla administrÃ¡tora:
 
 ```bash
-php scripts/gen_admin_hash.php "VašeHeslo"
+php scripts/gen_admin_hash.php "VaÅ¡eHeslo"
 ```
 
-5. Nastavte environment promìnné (napø. v `.env` nebo v konfiguraci serveru):
+5. Nastavte environment promÄ›nnÃ© (napÅ™. v `.env` nebo v konfiguraci serveru):
 
 ```text
-APP_SECRET=...dlouhı náhodnı øetìzec...
-ADMIN_PASSWORD_HASH=...vıstup z gen_admin_hash.php...
+APP_SECRET=...dlouhÃ½ nÃ¡hodnÃ½ Å™etÄ›zec...
+ADMIN_PASSWORD_HASH=...vÃ½stup z gen_admin_hash.php...
 DB_PATH=/absolute/path/to/data/mrbs.sqlite
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -41,24 +41,24 @@ SMTP_PASS=...
 SMTP_FROM_EMAIL=rezervace@example.com
 SMTP_FROM_NAME=UMT Rezervace
 SMTP_SECURE=tls
-SPACE_LABEL_A=Pùlka A (tribuna)
-SPACE_LABEL_B=Pùlka B (les)
+SPACE_LABEL_A=PÅ¯lka A (tribuna)
+SPACE_LABEL_B=PÅ¯lka B (les)
 ```
 
-## Spuštìní lokálnì
-Pouijte PHP vestavìnı server pouze pro vıvoj:
+## SpuÅ¡tÄ›nÃ­ lokÃ¡lnÄ›
+PouÅ¾ijte PHP vestavÄ›nÃ½ server pouze pro vÃ½voj:
 
 ```bash
 php -S 127.0.0.1:8080 -t public
 ```
 
 ## Struktura
-- `public/` – veøejnı web root
-- `app/` – logika aplikace
-- `data/` – SQLite databáze (mimo web root)
-- `scripts/` – migrace a helpery
+- `public/` â€“ veÅ™ejnÃ½ web root
+- `app/` â€“ logika aplikace
+- `data/` â€“ SQLite databÃ¡ze (mimo web root)
+- `scripts/` â€“ migrace a helpery
 
-## Nginx + PHP-FPM (pøíklad)
+## Nginx + PHP-FPM (pÅ™Ã­klad)
 ```nginx
 server {
     listen 443 ssl http2;
@@ -84,13 +84,14 @@ server {
 }
 ```
 
-## Bezpeènostní checklist
-- Pouívejte HTTPS a správné `session.cookie_secure`.
-- Udrujte `data/` mimo web root.
-- Nastavte pøísná práva souborù: kód jen pro ètení, DB jen pro PHP-FPM uivatele.
-- Zapnìte fail2ban / rate limiting na web serveru.
-- Pravidelné zálohy SQLite DB.
+## BezpeÄnostnÃ­ checklist
+- PouÅ¾Ã­vejte HTTPS a sprÃ¡vnÃ© `session.cookie_secure`.
+- UdrÅ¾ujte `data/` mimo web root.
+- Nastavte pÅ™Ã­snÃ¡ prÃ¡va souborÅ¯: kÃ³d jen pro ÄtenÃ­, DB jen pro PHP-FPM uÅ¾ivatele.
+- ZapnÄ›te fail2ban / rate limiting na web serveru.
+- PravidelnÃ© zÃ¡lohy SQLite DB.
 - Monitorujte `audit_log`.
 
-## Poznámky k bezpeènosti
-Aplikace pouívá CSRF tokeny, rate limiting, transakèní kontrolu konfliktù a hlavièky pro hardening. Vdy však zvate doplòkové vrstvy ochrany (WAF, síové limity, logování).
+## PoznÃ¡mky k bezpeÄnosti
+Aplikace pouÅ¾Ã­vÃ¡ CSRF tokeny, rate limiting, transakÄnÃ­ kontrolu konfliktÅ¯ a hlaviÄky pro hardening. VÅ¾dy vÅ¡ak zvaÅ¾te doplÅˆkovÃ© vrstvy ochrany (WAF, sÃ­Å¥ovÃ© limity, logovÃ¡nÃ­).
+

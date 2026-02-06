@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../app/db.php';
@@ -42,10 +42,10 @@ if ($action === 'verify_code') {
     $pendingId = (int) ($_POST['pending_id'] ?? 0);
     $code = trim((string) ($_POST['code'] ?? ''));
     if ($pendingId <= 0 || $code === '') {
-        fail_json('Neplatný kód.');
+        fail_json('NeplatnÃ½ kÃ³d.');
     }
     if (!rate_limit($db, 'verify_ip:' . $ip, 10, 3600)) {
-        fail_json('Pøíliš mnoho pokusù.');
+        fail_json('PÅ™Ã­liÅ¡ mnoho pokusÅ¯.');
     }
     $result = verify_pending_booking($db, $pendingId, $code, $ip);
     if (!$result['ok']) {
@@ -55,3 +55,4 @@ if ($action === 'verify_code') {
 }
 
 fail_json('Unknown action', 400);
+

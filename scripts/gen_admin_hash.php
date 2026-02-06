@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 
 $pass = $argv[1] ?? '';
@@ -7,3 +7,4 @@ if ($pass === '') {
     exit(1);
 }
 echo password_hash($pass, PASSWORD_DEFAULT) . "\n";
+

@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../app/config.php';
@@ -40,19 +40,19 @@ $weekLabel = $weekStart->format('o-\WW');
     <header class="topbar">
       <div class="brand">
         <div class="title">UMT Rozpis</div>
-        <div class="subtitle">Tıdenní rozpis umìlé trávy</div>
+        <div class="subtitle">TÃ½dennÃ­ rozpis umÄ›lÃ© trÃ¡vy</div>
       </div>
       <div class="actions">
-        <button class="btn" id="btn-new">Nová rezervace</button>
+        <button class="btn" id="btn-new">NovÃ¡ rezervace</button>
         <a class="btn ghost" href="/admin.php">Administrace</a>
       </div>
     </header>
 
     <main class="content">
       <div class="week-controls">
-        <button class="btn ghost" id="week-prev">‹</button>
+        <button class="btn ghost" id="week-prev">â€¹</button>
         <div id="week-label" class="week-label"></div>
-        <button class="btn ghost" id="week-next">›</button>
+        <button class="btn ghost" id="week-next">â€º</button>
       </div>
 
       <div id="calendar" class="calendar"></div>
@@ -63,8 +63,8 @@ $weekLabel = $weekStart->format('o-\WW');
   <div class="modal" id="modal-reserve" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Nová rezervace</div>
-        <button class="icon-btn" data-close="modal-reserve" aria-label="Zavøít">×</button>
+        <div class="modal-title">NovÃ¡ rezervace</div>
+        <button class="icon-btn" data-close="modal-reserve" aria-label="ZavÅ™Ã­t">Ã—</button>
       </div>
       <form id="form-reserve" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
@@ -82,7 +82,7 @@ $weekLabel = $weekStart->format('o-\WW');
             </select>
           </label>
           <label>
-            Zaèátek
+            ZaÄÃ¡tek
             <input type="time" name="start" required />
           </label>
           <label>
@@ -92,13 +92,13 @@ $weekLabel = $weekStart->format('o-\WW');
           <label>
             Prostor
             <select name="space" required>
-              <option value="WHOLE">Celá UMT</option>
+              <option value="WHOLE">CelÃ¡ UMT</option>
               <option value="HALF_A"><?= h(space_label('HALF_A')) ?></option>
               <option value="HALF_B"><?= h(space_label('HALF_B')) ?></option>
             </select>
           </label>
           <label>
-            Jméno / tım
+            JmÃ©no / tÃ½m
             <input type="text" name="name" maxlength="80" required />
           </label>
         </div>
@@ -106,9 +106,9 @@ $weekLabel = $weekStart->format('o-\WW');
           E-mail
           <input type="email" name="email" required />
         </label>
-        <div class="hint">Pùlka A = levá èást, Pùlka B = pravá èást. Popisky lze zmìnit v konfiguraci.</div>
+        <div class="hint">PÅ¯lka A = levÃ¡ ÄÃ¡st, PÅ¯lka B = pravÃ¡ ÄÃ¡st. Popisky lze zmÄ›nit v konfiguraci.</div>
         <button class="btn primary" type="submit">
-          <span class="btn-text">Odeslat ádost</span>
+          <span class="btn-text">Odeslat Å¾Ã¡dost</span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
       </form>
@@ -118,17 +118,17 @@ $weekLabel = $weekStart->format('o-\WW');
   <div class="modal" id="modal-verify" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Ovìøení e-mailu</div>
-        <button class="icon-btn" data-close="modal-verify" aria-label="Zavøít">×</button>
+        <div class="modal-title">OvÄ›Å™enÃ­ e-mailu</div>
+        <button class="icon-btn" data-close="modal-verify" aria-label="ZavÅ™Ã­t">Ã—</button>
       </div>
       <form id="form-verify" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
         <input type="hidden" name="pending_id" />
         <label>
-          Ovìøovací kód
+          OvÄ›Å™ovacÃ­ kÃ³d
           <input type="text" name="code" inputmode="numeric" maxlength="6" required />
         </label>
-        <div class="hint">Zbıvá <span id="verify-countdown">10:00</span></div>
+        <div class="hint">ZbÃ½vÃ¡ <span id="verify-countdown">10:00</span></div>
         <button class="btn primary" type="submit">
           <span class="btn-text">Potvrdit rezervaci</span>
           <span class="spinner" aria-hidden="true"></span>
@@ -142,3 +142,4 @@ $weekLabel = $weekStart->format('o-\WW');
   <script src="/assets/app.js" defer></script>
 </body>
 </html>
+

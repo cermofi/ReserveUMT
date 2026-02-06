@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 declare(strict_types=1);
 
 date_default_timezone_set('Europe/Prague');
@@ -15,8 +15,8 @@ $CONFIG = [
     'grid_start' => env('GRID_START', '06:00'),
     'grid_end' => env('GRID_END', '23:00'),
     'grid_step_min' => (int) env('GRID_STEP_MIN', '30'),
-    'space_label_a' => env('SPACE_LABEL_A', 'Pùlka A'),
-    'space_label_b' => env('SPACE_LABEL_B', 'Pùlka B'),
+    'space_label_a' => env('SPACE_LABEL_A', 'PÅ¯lka A'),
+    'space_label_b' => env('SPACE_LABEL_B', 'PÅ¯lka B'),
     'smtp' => [
         'host' => env('SMTP_HOST', ''),
         'port' => (int) env('SMTP_PORT', '587'),
@@ -28,7 +28,7 @@ $CONFIG = [
     ],
 ];
 
-const CATEGORIES = ['MP', 'MD', 'SŽ', 'Žáci', 'Dorost', 'Muži', 'Jiné'];
+const CATEGORIES = ['MP', 'MD', 'SÅ½', 'Å½Ã¡ci', 'Dorost', 'MuÅ¾i', 'JinÃ©'];
 const SPACES = ['WHOLE', 'HALF_A', 'HALF_B'];
 
 function cfg(string $key, $default = null) {
@@ -38,13 +38,14 @@ function cfg(string $key, $default = null) {
 
 function space_label(string $space): string {
     if ($space === 'WHOLE') {
-        return 'Celá UMT';
+        return 'CelÃ¡ UMT';
     }
     if ($space === 'HALF_A') {
-        return (string) cfg('space_label_a', 'Pùlka A');
+        return (string) cfg('space_label_a', 'PÅ¯lka A');
     }
     if ($space === 'HALF_B') {
-        return (string) cfg('space_label_b', 'Pùlka B');
+        return (string) cfg('space_label_b', 'PÅ¯lka B');
     }
     return $space;
 }
+
