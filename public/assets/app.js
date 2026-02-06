@@ -149,6 +149,7 @@
       track.dataset.date = ymd;
 
       let dragActive = false;
+      let dragMoved = false;
       let dragStartY = 0;
       let selectionEl = null;
 
@@ -187,13 +188,18 @@
         if (result) {
           openReservationModal(ymd, result.start, result.end);
         }
+        setTimeout(() => {
+          dragMoved = false;
+        }, 0);
       };
 
       track.addEventListener('mousedown', (e) => {
         if (page !== 'public') return;
         if (e.button !== 0) return;
         if (e.target && e.target.classList.contains('booking')) return;
+        e.preventDefault();
         dragActive = true;
+        dragMoved = false;
         dragStartY = e.clientY - track.getBoundingClientRect().top;
         selectionEl = document.createElement('div');
         selectionEl.className = 'selection-box';
@@ -203,6 +209,9 @@
 
       window.addEventListener('mousemove', (e) => {
         if (!dragActive) return;
+        if (Math.abs(e.clientY - (track.getBoundingClientRect().top + dragStartY)) > 4) {
+          dragMoved = true;
+        }
         updateSelection(e.clientY);
       });
 
@@ -213,7 +222,7 @@
 
       track.addEventListener('click', (e) => {
         if (page !== 'public') return;
-        if (dragActive) return;
+        if (dragActive || dragMoved) return;
         const rect = track.getBoundingClientRect();
         const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
         const offset = e.clientY - rect.top;
