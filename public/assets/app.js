@@ -121,6 +121,7 @@
     timeHeader.className = 'time-header';
     const timeLabels = document.createElement('div');
     timeLabels.className = 'time-labels';
+    timeLabels.style.setProperty('--total-minutes', totalMinutes);
 
     const startMin = parseHm(gridStart);
     for (let m = startMin; m <= startMin + totalMinutes; m += 60) {
@@ -128,6 +129,7 @@
       label.className = 'time-label';
       const h = String(Math.floor(m / 60)).padStart(2, '0');
       label.textContent = `${h}:00`;
+      label.style.top = `calc(${m - startMin} * var(--px-per-min))`;
       timeLabels.appendChild(label);
     }
     timeCol.appendChild(timeHeader);
@@ -255,12 +257,17 @@
         const idx = categoryIndex(b.category || '');
         item.classList.add(`cat-${idx}`);
         const displayName = (b.name && b.name.trim()) ? b.name : 'Rezervace';
-        item.innerHTML = `
-          <div class="booking-title">${displayName}</div>
-          <div class="chips">
-            <span class="chip">${spaceLabels[b.space] || b.space}</span>
-          </div>
-        `;
+        const titleEl = document.createElement('div');
+        titleEl.className = 'booking-title';
+        titleEl.textContent = displayName;
+        const chips = document.createElement('div');
+        chips.className = 'chips';
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = spaceLabels[b.space] || b.space;
+        chips.appendChild(chip);
+        item.appendChild(titleEl);
+        item.appendChild(chips);
         item.addEventListener('click', (ev) => {
           ev.stopPropagation();
           if (page === 'admin') {
@@ -301,13 +308,21 @@
       item.className = 'agenda-item';
       const start = new Date(b.start_ts * 1000);
       const end = new Date(b.end_ts * 1000);
-        item.innerHTML = `
-        <div class="booking-title">${b.name}</div>
-        <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)}</div>
-        <div class="chips">
-          <span class="chip">${spaceLabels[b.space] || b.space}</span>
-        </div>
-      `;
+      const title = document.createElement('div');
+      title.className = 'booking-title';
+      title.textContent = b.name || 'Rezervace';
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)}`;
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = spaceLabels[b.space] || b.space;
+      chips.appendChild(chip);
+      item.appendChild(title);
+      item.appendChild(meta);
+      item.appendChild(chips);
       agenda.appendChild(item);
     });
   };
