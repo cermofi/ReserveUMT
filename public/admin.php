@@ -221,7 +221,7 @@ $admin = is_admin();
               </div>
               <label>
                 E-mail (nebude veřejný)
-                <input type="email" name="email" required />
+                <input type="email" name="email" />
               </label>
               <button class="btn primary" type="submit">
                 <span class="btn-text">Uložit</span>
