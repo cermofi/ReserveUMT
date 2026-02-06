@@ -267,6 +267,7 @@ $admin = is_admin();
         <section class="panel">
           <div class="week-controls">
             <button class="btn ghost" id="week-prev">←</button>
+            <button class="btn ghost" id="week-today">Tento týden</button>
             <div id="week-label" class="week-label"></div>
             <button class="btn ghost" id="week-next">→</button>
           </div>

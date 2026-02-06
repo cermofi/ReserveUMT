@@ -253,8 +253,19 @@
   const wireWeekButtons = () => {
     const prev = document.getElementById('week-prev');
     const next = document.getElementById('week-next');
+    const today = document.getElementById('week-today');
     if (prev) prev.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() - 7);
+      loadWeek();
+    });
+    if (today) today.addEventListener('click', () => {
+      const now = new Date();
+      const monday = new Date(now);
+      const day = monday.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      monday.setDate(monday.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+      weekStart.setTime(monday.getTime());
       loadWeek();
     });
     if (next) next.addEventListener('click', () => {
