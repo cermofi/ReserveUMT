@@ -168,6 +168,94 @@ function list_recurring_occurrences(PDO $db, int $from_ts, int $to_ts): array {
     return $out;
 }
 
+function random_token(): string {
+    return bin2hex(random_bytes(16));
+}
+
+function ensure_email_token(PDO $db, string $email): string {
+    $stmt = $db->prepare('SELECT token FROM email_tokens WHERE email = ?');
+    $stmt->execute([$email]);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['token'])) {
+        return (string) $row['token'];
+    }
+    $token = random_token();
+    $ins = $db->prepare('INSERT INTO email_tokens(email, token, created_ts) VALUES (?, ?, ?)');
+    $ins->execute([$email, $token, time()]);
+    return $token;
+}
+
+function ensure_booking_token(PDO $db, int $bookingId): string {
+    $stmt = $db->prepare('SELECT edit_token FROM bookings WHERE id = ?');
+    $stmt->execute([$bookingId]);
+    $row = $stmt->fetch();
+    if ($row && !empty($row['edit_token'])) {
+        return (string) $row['edit_token'];
+    }
+    $token = random_token();
+    $upd = $db->prepare('UPDATE bookings SET edit_token = ? WHERE id = ?');
+    $upd->execute([$token, $bookingId]);
+    return $token;
+}
+
+function format_booking_range(int $start_ts, int $end_ts): string {
+    $tz = new DateTimeZone('Europe/Prague');
+    $start = (new DateTimeImmutable('@' . $start_ts))->setTimezone($tz);
+    $end = (new DateTimeImmutable('@' . $end_ts))->setTimezone($tz);
+    if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
+        return $start->format('d.m.Y H:i') . '–' . $end->format('H:i');
+    }
+    return $start->format('d.m.Y H:i') . ' – ' . $end->format('d.m.Y H:i');
+}
+
+function send_manage_links(PDO $db, int $bookingId, string $email, int $start_ts, int $end_ts, string $space, string $name): void {
+    if ($email === '') {
+        return;
+    }
+    $bookingToken = ensure_booking_token($db, $bookingId);
+    $emailToken = ensure_email_token($db, $email);
+    $bookingLink = app_url() . '/manage.php?booking=' . urlencode($bookingToken);
+    $emailLink = app_url() . '/manage.php?email=' . urlencode($emailToken);
+    $range = format_booking_range($start_ts, $end_ts);
+    $spaceLabel = space_label($space);
+    if (!send_manage_links_email($email, $range, $spaceLabel, $name, $bookingLink, $emailLink)) {
+        debug_log('manage_link_email_failed', ['email' => $email, 'booking_id' => $bookingId]);
+    }
+}
+
+function get_booking_by_token(PDO $db, string $token): ?array {
+    $stmt = $db->prepare('SELECT * FROM bookings WHERE edit_token = ?');
+    $stmt->execute([$token]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function get_email_by_token(PDO $db, string $token): ?string {
+    $stmt = $db->prepare('SELECT email FROM email_tokens WHERE token = ?');
+    $stmt->execute([$token]);
+    $row = $stmt->fetch();
+    if (!$row || empty($row['email'])) {
+        return null;
+    }
+    return (string) $row['email'];
+}
+
+function list_bookings_for_email_token(PDO $db, string $token): array {
+    $email = get_email_by_token($db, $token);
+    if ($email === null) {
+        return [];
+    }
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, category, space, edit_token FROM bookings WHERE email = ? ORDER BY start_ts DESC');
+    $stmt->execute([$email]);
+    $rows = $stmt->fetchAll();
+    foreach ($rows as &$row) {
+        if (empty($row['edit_token'])) {
+            $row['edit_token'] = ensure_booking_token($db, (int) $row['id']);
+        }
+    }
+    return $rows;
+}
+
 function create_pending_booking(PDO $db, array $data, string $ip): array {
     $date = trim((string) ($data['date'] ?? ''));
     $start = trim((string) ($data['start'] ?? ''));
@@ -244,6 +332,7 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
                 'end_ts' => $end_ts,
                 'space' => $space,
             ]);
+            send_manage_links($db, $bookingId, $email, $start_ts, $end_ts, $space, $name);
             return ['ok' => true, 'booking_id' => $bookingId];
         } catch (Throwable $e) {
             if ($db->inTransaction()) {
@@ -321,6 +410,7 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
             'end_ts' => $end_ts,
             'space' => $space,
         ]);
+        send_manage_links($db, $bookingId, (string) $pending['email'], $start_ts, $end_ts, $space, (string) $pending['name']);
         return ['ok' => true, 'booking_id' => $bookingId];
     } catch (Throwable $e) {
         if ($db->inTransaction()) {
@@ -377,6 +467,7 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
         $bookingId = (int) $db->lastInsertId();
         $db->exec('COMMIT');
         log_audit($db, 'admin_booking_created', 'admin', $ip, ['booking_id' => $bookingId]);
+        send_manage_links($db, $bookingId, $email, $start_ts, $end_ts, $space, $name);
         return ['ok' => true, 'booking_id' => $bookingId];
     } catch (Throwable $e) {
         if ($db->inTransaction()) {
@@ -405,7 +496,7 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
     if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
         return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
     }
-    if ($name === '' || mb_strlen($name) > 80) {
+    if ($name !== '' && mb_strlen($name) > 80) {
         return ['ok' => false, 'error' => 'Neplatné jméno.'];
     }
     if ($email !== '' && !validate_email_addr($email)) {
@@ -525,5 +616,73 @@ function admin_delete_occurrence(PDO $db, int $ruleId, int $dateTs, string $ip):
     $stmt = $db->prepare('INSERT OR IGNORE INTO recurring_exceptions(rule_id, date_ts, created_ts) VALUES (?, ?, ?)');
     $stmt->execute([$ruleId, $dateTs, time()]);
     log_audit($db, 'admin_occurrence_deleted', 'admin', $ip, ['rule_id' => $ruleId, 'date_ts' => $dateTs]);
+    return ['ok' => true];
+}
+
+function public_update_booking(PDO $db, string $token, array $data, string $ip): array {
+    $booking = get_booking_by_token($db, $token);
+    if (!$booking) {
+        return ['ok' => false, 'error' => 'Rezervace nenalezena.'];
+    }
+
+    $date = trim((string) ($data['date'] ?? ''));
+    $start = trim((string) ($data['start'] ?? ''));
+    $end = trim((string) ($data['end'] ?? ''));
+    $name = trim((string) ($data['name'] ?? ''));
+    $space = trim((string) ($data['space'] ?? ''));
+
+    if (!validate_date($date) || !validate_time($start) || !validate_time($end)) {
+        return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
+    }
+    if ($name === '' || mb_strlen($name) > 80) {
+        return ['ok' => false, 'error' => 'Neplatné jméno.'];
+    }
+    if (!in_array($space, SPACES, true)) {
+        return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
+    }
+
+    $dtStart = dt_from_date_time($date, $start);
+    $dtEnd = dt_from_date_time($date, $end);
+    if (!$dtStart || !$dtEnd) {
+        return ['ok' => false, 'error' => 'Neplatné datum nebo čas.'];
+    }
+    $start_ts = $dtStart->getTimestamp();
+    $end_ts = $dtEnd->getTimestamp();
+    if ($end_ts <= $start_ts) {
+        return ['ok' => false, 'error' => 'Konec musí být po začátku.'];
+    }
+    if (($end_ts - $start_ts) > 7200) {
+        return ['ok' => false, 'error' => 'Maximální délka rezervace je 2 hodiny.'];
+    }
+
+    $id = (int) $booking['id'];
+    try {
+        $db->exec('BEGIN IMMEDIATE');
+        if (has_conflict($db, $start_ts, $end_ts, $space, $id)) {
+            $db->exec('COMMIT');
+            return ['ok' => false, 'error' => 'Termín je obsazený.'];
+        }
+        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, space = ? WHERE id = ?');
+        $stmt->execute([$start_ts, $end_ts, $name, $space, $id]);
+        $db->exec('COMMIT');
+        log_audit($db, 'public_booking_updated', 'public', $ip, ['booking_id' => $id]);
+        return ['ok' => true];
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->exec('ROLLBACK');
+        }
+        return ['ok' => false, 'error' => 'Chyba uložení.'];
+    }
+}
+
+function public_delete_booking(PDO $db, string $token, string $ip): array {
+    $booking = get_booking_by_token($db, $token);
+    if (!$booking) {
+        return ['ok' => false, 'error' => 'Rezervace nenalezena.'];
+    }
+    $id = (int) $booking['id'];
+    $stmt = $db->prepare('DELETE FROM bookings WHERE id = ?');
+    $stmt->execute([$id]);
+    log_audit($db, 'public_booking_deleted', 'public', $ip, ['booking_id' => $id]);
     return ['ok' => true];
 }

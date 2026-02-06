@@ -34,6 +34,7 @@ php scripts/gen_admin_hash.php "VašeHeslo"
 APP_SECRET=...dlouhý náhodný řetězec...
 ADMIN_PASSWORD_HASH=...výstup z gen_admin_hash.php...
 DB_PATH=/absolute/path/to/data/mrbs.sqlite
+APP_URL=https://umt.example.com
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=...
@@ -105,3 +106,6 @@ DEBUG_LOG_PATH=/absolute/path/to/data/debug.log
 ```
 
 Aplikace pak zapisuje JSON řádky do souboru (bez citlivých dat, pokud nepředáte do contextu).
+
+### Správa rezervací přes e-mail
+Po potvrzení rezervace systém odešle e-mail s odkazy pro úpravu dané rezervace a pro přístup ke všem rezervacím na daný e-mail. Pro správné odkazy nastavte `APP_URL`.

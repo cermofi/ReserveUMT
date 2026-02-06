@@ -15,6 +15,23 @@ function db(): PDO {
     return $db;
 }
 
+function column_exists(PDO $db, string $table, string $column): bool {
+    $stmt = $db->query("PRAGMA table_info($table)");
+    $cols = $stmt->fetchAll();
+    foreach ($cols as $col) {
+        if (isset($col['name']) && $col['name'] === $column) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function add_column_if_missing(PDO $db, string $table, string $column, string $definition): void {
+    if (!column_exists($db, $table, $column)) {
+        $db->exec("ALTER TABLE $table ADD COLUMN $column $definition");
+    }
+}
+
 function migrate(PDO $db): void {
     $db->exec("CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +102,14 @@ function migrate(PDO $db): void {
         count INTEGER NOT NULL
     )");
 
+    $db->exec("CREATE TABLE IF NOT EXISTS email_tokens (
+        email TEXT PRIMARY KEY,
+        token TEXT NOT NULL,
+        created_ts INTEGER NOT NULL
+    )");
+
+    add_column_if_missing($db, 'bookings', 'edit_token', 'TEXT');
+
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
 
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_start_end ON bookings(start_ts, end_ts)");
@@ -92,5 +117,6 @@ function migrate(PDO $db): void {
     $db->exec("CREATE INDEX IF NOT EXISTS idx_recurring_range ON recurring_rules(start_date, end_date)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_pending_email ON pending_bookings(email)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(ts)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_edit_token ON bookings(edit_token)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_email_tokens_token ON email_tokens(token)");
 }
-

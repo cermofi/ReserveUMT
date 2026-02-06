@@ -152,6 +152,16 @@ a {
   margin-bottom: 20px;
 }
 
+.panel.ok {
+  border-color: color-mix(in srgb, var(--ok) 60%, var(--border));
+  background: color-mix(in srgb, var(--ok) 8%, var(--panel));
+}
+
+.panel.warning {
+  border-color: color-mix(in srgb, var(--danger) 60%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, var(--panel));
+}
+
 .panel.narrow {
   max-width: 420px;
   margin: 40px auto;

@@ -12,6 +12,7 @@ $CONFIG = [
     'db_path' => env('DB_PATH', __DIR__ . '/../data/mrbs.sqlite'),
     'app_secret' => env('APP_SECRET', ''),
     'admin_password_hash' => env('ADMIN_PASSWORD_HASH', ''),
+    'app_url' => env('APP_URL', ''),
     'grid_start' => env('GRID_START', '08:00'),
     'grid_end' => env('GRID_END', '21:00'),
     'grid_step_min' => (int) env('GRID_STEP_MIN', '30'),
@@ -36,6 +37,17 @@ const SPACES = ['WHOLE', 'HALF_A', 'HALF_B'];
 function cfg(string $key, $default = null) {
     global $CONFIG;
     return $CONFIG[$key] ?? $default;
+}
+
+function app_url(): string {
+    $url = (string) cfg('app_url', '');
+    if ($url !== '') {
+        return rtrim($url, '/');
+    }
+    $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $scheme = $secure ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    return $scheme . '://' . $host;
 }
 
 function space_label(string $space): string {

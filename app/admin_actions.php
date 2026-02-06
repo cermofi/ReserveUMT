@@ -13,4 +13,3 @@ function require_admin(): void {
         fail_json('Unauthorized', 401);
     }
 }
-

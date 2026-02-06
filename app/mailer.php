@@ -59,3 +59,16 @@ function send_verification_email(string $email, string $code): bool {
     $body = "Váš ověřovací kód: {$code}\n\nPlatnost: 10 minut. Pokud jste žádost nevytvářeli, tento e-mail ignorujte.";
     return mailer_send($email, $subject, $body);
 }
+
+function send_manage_links_email(string $email, string $range, string $spaceLabel, string $name, string $bookingLink, string $emailLink): bool {
+    $subject = 'Správa rezervace UMT';
+    $displayName = $name !== '' ? $name : '-';
+    $body = "Rezervace UMT potvrzena.\n\n";
+    $body .= "Termín: {$range}\n";
+    $body .= "Prostor: {$spaceLabel}\n";
+    $body .= "Jméno/tým: {$displayName}\n\n";
+    $body .= "Správa této rezervace:\n{$bookingLink}\n\n";
+    $body .= "Správa všech rezervací na tento e-mail:\n{$emailLink}\n\n";
+    $body .= "Pokud jste rezervaci nevytvářeli, kontaktujte správce.";
+    return mailer_send($email, $subject, $body);
+}
