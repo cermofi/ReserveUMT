@@ -54,6 +54,8 @@ $weekLabel = $weekStart->format('o-\WW');
         <button class="btn ghost" id="week-today">Tento týden</button>
         <div id="week-label" class="week-label"></div>
         <button class="btn ghost" id="week-next">→</button>
+        <input type="date" id="week-date" aria-label="Přejít na datum" />
+        <button class="btn ghost" id="week-go">Přejít</button>
       </div>
       <div class="legend-split">
         <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>

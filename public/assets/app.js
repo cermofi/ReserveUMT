@@ -403,9 +403,34 @@
     const prev = document.getElementById('week-prev');
     const next = document.getElementById('week-next');
     const today = document.getElementById('week-today');
+    const dateInput = document.getElementById('week-date');
+    const goBtn = document.getElementById('week-go');
+
+    const syncDateInput = () => {
+      if (!dateInput) return;
+      dateInput.value = formatYmd(weekStart);
+    };
+
+    const jumpToDate = (ymd) => {
+      if (!ymd) return;
+      const d = parseYmd(ymd);
+      if (Number.isNaN(d.getTime())) return;
+      const monday = new Date(d);
+      const day = monday.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      monday.setDate(monday.getDate() + diff);
+      monday.setHours(0, 0, 0, 0);
+      weekStart.setTime(monday.getTime());
+      loadWeek();
+      syncDateInput();
+    };
+
+    syncDateInput();
+
     if (prev) prev.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() - 7);
       loadWeek();
+      syncDateInput();
     });
     if (today) today.addEventListener('click', () => {
       const now = new Date();
@@ -416,11 +441,17 @@
       monday.setHours(0, 0, 0, 0);
       weekStart.setTime(monday.getTime());
       loadWeek();
+      syncDateInput();
     });
     if (next) next.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() + 7);
       loadWeek();
+      syncDateInput();
     });
+    if (goBtn && dateInput) {
+      goBtn.addEventListener('click', () => jumpToDate(dateInput.value));
+      dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
+    }
   };
 
   const openReservationModal = (dateStr, startMin, endMin) => {
