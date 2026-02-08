@@ -147,7 +147,7 @@
       col.className = 'day-col';
       const header = document.createElement('div');
       header.className = 'day-header';
-      header.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: '2-digit', month: '2-digit' });
+      header.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
       const track = document.createElement('div');
       track.className = 'day-track';
       track.style.setProperty('--total-minutes', totalMinutes);
