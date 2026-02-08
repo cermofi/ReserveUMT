@@ -7,6 +7,7 @@ require_once __DIR__ . '/../app/security.php';
 require_once __DIR__ . '/../app/bookings.php';
 
 send_security_headers();
+init_app_error_logging('html');
 secure_session_start();
 $db = db();
 migrate($db);

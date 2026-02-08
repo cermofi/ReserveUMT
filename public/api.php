@@ -10,7 +10,7 @@ ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
 send_security_headers();
-init_api_error_handler();
+init_app_error_logging('json');
 $db = db();
 migrate($db);
 

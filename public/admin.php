@@ -12,6 +12,7 @@ ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
 send_security_headers();
+init_app_error_logging('html');
 secure_session_start();
 $db = db();
 migrate($db);

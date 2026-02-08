@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/security.php';
 
 send_security_headers();
+init_app_error_logging('html');
 secure_session_start();
 $csrf = csrf_token();
 $tz = new DateTimeZone('Europe/Prague');

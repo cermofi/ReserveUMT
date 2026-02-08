@@ -162,31 +162,73 @@ function debug_log(string $message, array $context = []): void {
     }
 }
 
-function init_api_error_handler(): void {
+function init_app_error_logging(string $mode = 'html'): void {
     set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
         throw new ErrorException($message, 0, $severity, $file, $line);
     });
 
-    set_exception_handler(function (Throwable $e): void {
+    $logContext = function (): array {
+        $redact = function ($value, string $key) {
+            if (preg_match('/(pass|password|secret|token|csrf)/i', $key)) {
+                return '[redacted]';
+            }
+            return $value;
+        };
+        $filter = function (array $src) use ($redact): array {
+            $out = [];
+            foreach ($src as $k => $v) {
+                if (is_scalar($v)) {
+                    $out[$k] = $redact($v, (string) $k);
+                } else {
+                    $out[$k] = '[complex]';
+                }
+            }
+            return $out;
+        };
+        return [
+            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'uri' => $_SERVER['REQUEST_URI'] ?? '',
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'get' => $filter($_GET ?? []),
+            'post' => $filter($_POST ?? []),
+        ];
+    };
+
+    set_exception_handler(function (Throwable $e) use ($mode, $logContext): void {
         debug_log('exception', [
             'type' => get_class($e),
             'message' => $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'request' => $logContext(),
         ]);
         if (!headers_sent()) {
-            respond_json(['ok' => false, 'error' => 'Server error'], 500);
+            if ($mode === 'json') {
+                respond_json(['ok' => false, 'error' => 'Server error'], 500);
+            }
+            http_response_code(500);
+            echo '<!doctype html><meta charset="utf-8"><title>Server error</title><h1>Server error</h1>';
         }
         exit;
     });
 
-    register_shutdown_function(function (): void {
+    register_shutdown_function(function () use ($mode, $logContext): void {
         $err = error_get_last();
         if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            $err['request'] = $logContext();
             debug_log('fatal', $err);
             if (!headers_sent()) {
-                respond_json(['ok' => false, 'error' => 'Server error'], 500);
+                if ($mode === 'json') {
+                    respond_json(['ok' => false, 'error' => 'Server error'], 500);
+                }
+                http_response_code(500);
+                echo '<!doctype html><meta charset="utf-8"><title>Server error</title><h1>Server error</h1>';
             }
         }
     });
+}
+
+function init_api_error_handler(): void {
+    init_app_error_logging('json');
 }
