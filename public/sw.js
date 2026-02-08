@@ -1,4 +1,4 @@
-const CACHE_NAME = 'umt-static-v1';
+const CACHE_NAME = 'umt-static-v2';
 const STATIC_ASSETS = [
   '/assets/app.css',
   '/assets/app.js',
