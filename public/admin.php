@@ -150,8 +150,11 @@ $admin = is_admin();
 <html lang="cs">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0d10" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>Administrace UMT</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
@@ -178,7 +181,7 @@ $admin = is_admin();
             <input type="hidden" name="action" value="login" />
             <label>
               Heslo administrátora
-              <input type="password" name="password" required />
+              <input type="password" name="password" required autocomplete="current-password" enterkeyhint="done" />
             </label>
             <button class="btn primary" type="submit">
               <span class="btn-text">Přihlásit</span>
@@ -196,7 +199,7 @@ $admin = is_admin();
               <div class="grid-2">
                 <label>
                   Datum
-                  <input type="date" name="date" required />
+                  <input type="date" name="date" required autocomplete="off" />
                 </label>
                 <label>
                   Kategorie
@@ -208,11 +211,11 @@ $admin = is_admin();
                 </label>
                 <label>
                   Začátek
-                  <input type="time" name="start" required />
+                  <input type="time" name="start" required inputmode="numeric" />
                 </label>
                 <label>
                   Konec
-                  <input type="time" name="end" required />
+                  <input type="time" name="end" required inputmode="numeric" />
                 </label>
                 <label>
                   Prostor
@@ -224,16 +227,16 @@ $admin = is_admin();
                 </label>
                 <label>
                   Jméno / tým
-                  <input type="text" name="name" maxlength="80" />
+                  <input type="text" name="name" maxlength="80" autocomplete="name" enterkeyhint="next" />
                 </label>
                 <label>
                   Poznámka (neveřejná)
-                  <textarea name="note" rows="2" maxlength="500"></textarea>
+                  <textarea name="note" rows="2" maxlength="500" autocomplete="off" enterkeyhint="done"></textarea>
                 </label>
               </div>
               <label>
                 E-mail (nebude veřejný)
-                <input type="email" name="email" />
+                <input type="email" name="email" autocomplete="email" inputmode="email" enterkeyhint="done" />
               </label>
               <button class="btn primary" type="submit">
                 <span class="btn-text">Uložit</span>
@@ -250,7 +253,7 @@ $admin = is_admin();
               <div class="grid-2">
                 <label>
                   Název
-                  <input type="text" name="title" maxlength="80" required />
+                  <input type="text" name="title" maxlength="80" required autocomplete="off" enterkeyhint="next" />
                 </label>
                 <label>
                   Kategorie
@@ -282,19 +285,19 @@ $admin = is_admin();
                 </label>
                 <label>
                   Začátek
-                  <input type="time" name="start" required />
+                  <input type="time" name="start" required inputmode="numeric" />
                 </label>
                 <label>
                   Konec
-                  <input type="time" name="end" required />
+                  <input type="time" name="end" required inputmode="numeric" />
                 </label>
                 <label>
                   Od
-                  <input type="date" name="start_date" required />
+                  <input type="date" name="start_date" required autocomplete="off" />
                 </label>
                 <label>
                   Do
-                  <input type="date" name="end_date" required />
+                  <input type="date" name="end_date" required autocomplete="off" />
                 </label>
               </div>
               <button class="btn primary" type="submit">
@@ -313,7 +316,7 @@ $admin = is_admin();
             <button class="btn ghost" id="week-next">→</button>
           </div>
           <h2>Kalendář rezervací</h2>
-          <div id="calendar" class="calendar"></div>
+          <div class="calendar-wrap"><div id="calendar" class="calendar"></div></div>
           <div id="agenda" class="agenda"></div>
           <div class="hint">Kliknutím na rezervaci ji upravíte nebo smažete.</div>
         </section>
@@ -363,7 +366,7 @@ $admin = is_admin();
         <div class="grid-2">
           <label>
             Datum
-            <input type="date" name="date" required />
+            <input type="date" name="date" required autocomplete="off" />
           </label>
           <label>
             Kategorie
@@ -375,11 +378,11 @@ $admin = is_admin();
           </label>
           <label>
             Začátek
-            <input type="time" name="start" required />
+            <input type="time" name="start" required inputmode="numeric" />
           </label>
           <label>
             Konec
-            <input type="time" name="end" required />
+            <input type="time" name="end" required inputmode="numeric" />
           </label>
           <label>
             Prostor
@@ -391,16 +394,16 @@ $admin = is_admin();
           </label>
           <label>
             Jméno / tým
-            <input type="text" name="name" maxlength="80" />
+            <input type="text" name="name" maxlength="80" autocomplete="name" enterkeyhint="next" />
           </label>
           <label>
             Poznámka (neveřejná)
-            <textarea name="note" rows="2" maxlength="500"></textarea>
+            <textarea name="note" rows="2" maxlength="500" autocomplete="off" enterkeyhint="done"></textarea>
           </label>
         </div>
         <label>
           E-mail
-          <input type="email" name="email" />
+          <input type="email" name="email" autocomplete="email" inputmode="email" enterkeyhint="done" />
         </label>
         <div class="grid-2">
           <button class="btn primary" type="submit">
@@ -414,6 +417,7 @@ $admin = is_admin();
   </div>
 
   <div class="toast" id="toast"></div>
+  <script src="/assets/pwa.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </body>
 </html>

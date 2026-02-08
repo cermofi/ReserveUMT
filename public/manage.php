@@ -76,8 +76,11 @@ function format_time(int $ts): string {
 <html lang="cs">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0d10" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>Správa rezervace</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
@@ -111,15 +114,15 @@ function format_time(int $ts): string {
             <div class="grid-2">
               <label>
                 Datum
-                <input type="date" name="date" value="<?= h(format_date((int) $booking['start_ts'])) ?>" required />
+                <input type="date" name="date" value="<?= h(format_date((int) $booking['start_ts'])) ?>" required autocomplete="off" />
               </label>
               <label>
                 Začátek
-                <input type="time" name="start" value="<?= h(format_time((int) $booking['start_ts'])) ?>" required />
+                <input type="time" name="start" value="<?= h(format_time((int) $booking['start_ts'])) ?>" required inputmode="numeric" />
               </label>
               <label>
                 Konec
-                <input type="time" name="end" value="<?= h(format_time((int) $booking['end_ts'])) ?>" required />
+                <input type="time" name="end" value="<?= h(format_time((int) $booking['end_ts'])) ?>" required inputmode="numeric" />
               </label>
               <label>
                 Prostor
@@ -136,7 +139,7 @@ function format_time(int $ts): string {
             </div>
             <div class="hint">Maximální délka veřejné rezervace je 2 hodiny.</div>
             <div class="grid-2">
-              <button class="btn primary" type="submit">Uložit změny</button>
+              <button class="btn primary" type="submit" enterkeyhint="done">Uložit změny</button>
               <button class="btn ghost" type="submit" name="action" value="delete_booking" onclick="return confirm('Opravdu smazat rezervaci?');">Smazat rezervaci</button>
             </div>
           </form>
@@ -182,5 +185,6 @@ function format_time(int $ts): string {
       <?php endif; ?>
     </main>
   </div>
+  <script src="/assets/pwa.js" defer></script>
 </body>
 </html>

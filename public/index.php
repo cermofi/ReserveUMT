@@ -31,8 +31,11 @@ $weekLabel = $weekStart->format('o-\WW');
 <html lang="cs">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0d10" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>UMT Rozpis</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
@@ -55,7 +58,7 @@ $weekLabel = $weekStart->format('o-\WW');
         <button class="btn ghost" id="week-today">Tento týden</button>
         <div id="week-label" class="week-label"></div>
         <button class="btn ghost" id="week-next">→</button>
-        <input type="date" id="week-date" aria-label="Přejít na datum" />
+        <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" />
       </div>
       <div class="legend-split">
         <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>
@@ -63,7 +66,9 @@ $weekLabel = $weekStart->format('o-\WW');
         <span>CELÁ = celá UMT</span>
       </div>
 
-      <div id="calendar" class="calendar"></div>
+      <div class="calendar-wrap">
+        <div id="calendar" class="calendar"></div>
+      </div>
       <div id="agenda" class="agenda"></div>
     </main>
   </div>
@@ -79,13 +84,13 @@ $weekLabel = $weekStart->format('o-\WW');
         <div class="grid-2">
           <label>
             Datum
-            <input type="date" name="date" required />
+            <input type="date" name="date" required autocomplete="off" />
           </label>
           <label>
             Začátek
             <div class="time-row">
               <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
-              <input type="time" name="start" required />
+              <input type="time" name="start" required inputmode="numeric" />
               <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
             </div>
           </label>
@@ -93,7 +98,7 @@ $weekLabel = $weekStart->format('o-\WW');
             Konec
             <div class="time-row">
               <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
-              <input type="time" name="end" required />
+              <input type="time" name="end" required inputmode="numeric" />
               <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
             </div>
           </label>
@@ -109,16 +114,16 @@ $weekLabel = $weekStart->format('o-\WW');
           </label>
           <label>
             Jméno / tým
-            <input type="text" name="name" maxlength="80" required />
+            <input type="text" name="name" maxlength="80" required autocomplete="name" enterkeyhint="next" />
           </label>
           <label>
             Poznámka (neveřejná)
-            <textarea name="note" rows="2" maxlength="500"></textarea>
+            <textarea name="note" rows="2" maxlength="500" autocomplete="off" enterkeyhint="done"></textarea>
           </label>
         </div>
         <label id="field-email">
           E-mail
-          <input type="email" name="email" required />
+          <input type="email" name="email" required autocomplete="email" inputmode="email" enterkeyhint="done" />
         </label>
         <div class="hint">Půlka A = levá část, Půlka B = pravá část. Popisky lze změnit v konfiguraci.</div>
         <button class="btn primary" type="submit">
@@ -140,7 +145,7 @@ $weekLabel = $weekStart->format('o-\WW');
         <input type="hidden" name="pending_id" />
         <label>
           Ověřovací kód
-          <input type="text" name="code" inputmode="numeric" maxlength="6" required />
+          <input type="text" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" enterkeyhint="done" required />
         </label>
         <div class="hint">Zbývá <span id="verify-countdown">10:00</span></div>
         <button class="btn primary" type="submit">
@@ -153,6 +158,7 @@ $weekLabel = $weekStart->format('o-\WW');
 
   <div class="toast" id="toast"></div>
 
+  <script src="/assets/pwa.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </body>
 </html>

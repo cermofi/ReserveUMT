@@ -96,6 +96,18 @@ server {
 ## Poznámky k bezpečnosti
 Aplikace používá CSRF tokeny, rate limiting, transakční kontrolu konfliktů a hlavičky pro hardening. Vždy však zvažte doplňkové vrstvy ochrany (WAF, síťové limity, logování).
 
+## Mobile + PWA checklist
+- Mobilní layout: žádný horizontální scroll stránky na šířce 320px (calendar má vlastní scroll).
+- Tap targety: tlačítka min 44px, formuláře čitelné na mobilu.
+- Agenda view: na mobilu se zobrazuje seznam rezervací, desktop zůstává s kalendářem.
+- PWA: manifest validní, service worker bez chyb, „Přidat na plochu“ funguje.
+
+## Jak testovat (rychle)
+1. Chrome DevTools → Device Toolbar → šířka 320px, ověř bez horizontálního scrollu.
+2. iOS Safari (poslední 2 verze): vytvoření rezervace, ověření e‑mailem, admin přihlášení.
+3. Android Chrome/Samsung Internet: agenda view čitelný, modály ovladatelné prstem.
+4. PWA: v Chrome otevři menu → „Install app“ a ověř ikonu a standalone režim.
+
 
 ### Debug log (volitelně)
 Nastavte:
