@@ -3,6 +3,42 @@ declare(strict_types=1);
 
 date_default_timezone_set('Europe/Prague');
 
+function load_env_file(string $path): void {
+    if (!is_file($path) || !is_readable($path)) {
+        return;
+    }
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if (!$lines) {
+        return;
+    }
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        $pos = strpos($line, '=');
+        if ($pos === false) {
+            continue;
+        }
+        $key = trim(substr($line, 0, $pos));
+        $val = trim(substr($line, $pos + 1));
+        if ($key === '') {
+            continue;
+        }
+        if (($val[0] ?? '') === '"' && substr($val, -1) === '"') {
+            $val = stripcslashes(substr($val, 1, -1));
+        } elseif (($val[0] ?? '') === "'" && substr($val, -1) === "'") {
+            $val = substr($val, 1, -1);
+        }
+        if (getenv($key) === false) {
+            putenv($key . '=' . $val);
+            $_ENV[$key] = $val;
+        }
+    }
+}
+
+load_env_file(__DIR__ . '/../.env');
+
 function env(string $key, $default = null) {
     $v = getenv($key);
     return ($v === false || $v === '') ? $default : $v;
