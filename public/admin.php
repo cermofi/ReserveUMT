@@ -324,9 +324,12 @@ $admin = is_admin();
         <section class="panel">
           <h2>Nastavení</h2>
           <div class="form">
-            <label>
-              <input type="checkbox" id="toggle-verify" />
-              Vyžadovat ověření e-mailu u nové rezervace
+            <label class="switch-row">
+              <span>Vyžadovat ověření e-mailu u nové rezervace</span>
+              <span class="switch">
+                <input type="checkbox" id="toggle-verify" />
+                <span class="slider" aria-hidden="true"></span>
+              </span>
             </label>
             <div class="hint">Pokud je vypnuto, rezervace se uloží okamžitě bez e-mailového kódu.</div>
           </div>
