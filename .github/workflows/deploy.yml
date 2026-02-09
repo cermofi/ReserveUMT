@@ -73,7 +73,7 @@ jobs:
             fi
 
             echo '--- reload services ---'
-            sudo systemctl reload php8.3-fpm 2>/dev/null || true
+            sudo systemctl restart php8.3-fpm 2>/dev/null || true
             sudo systemctl reload apache2     2>/dev/null || true
             sudo systemctl reload nginx       2>/dev/null || true
           "
