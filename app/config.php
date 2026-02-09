@@ -5,7 +5,7 @@ date_default_timezone_set('Europe/Prague');
 
 // Upravit zde
 $CONFIG = [
-    'db_path' => __DIR__ . '/../data/mrbs.sqlite',
+    'db_path' => __DIR__ . '/../../data/mrbs.sqlite',
     'app_secret' => 'a24f3cb3ffc1b625d209b3c462d31f11ec63c888cf374bfe86fee517028176d5',
     'admin_password_hash' => '$2y$10$N/.nTbjHUl9afmRkQB8Ra.qCd29fs8EoJlE3lwlC7Nu3.URDYi5ai',
     'app_url' => '',
