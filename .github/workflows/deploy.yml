@@ -1,0 +1,71 @@
+name: Deploy (git pull on server)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-umt
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy on server (pull + migrate + reload)
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
+          PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
+            set -euo pipefail
+
+            cd '${PATH_REMOTE}'
+
+            echo '--- repo ---'
+            git remote -v
+            echo '--- before ---'
+            git rev-parse --short HEAD || true
+
+            # Bezpečnost: failni, když je working tree špinavý
+            if [ -n \"\$(git status --porcelain)\" ]; then
+              echo 'ERROR: working tree is dirty on server. Fix it (commit/stash/reset) and retry.'
+              git status --porcelain
+              exit 1
+            fi
+
+            echo '--- pull (ff-only) ---'
+            git pull --ff-only origin main
+
+            echo '--- after ---'
+            git rev-parse --short HEAD
+
+            echo '--- composer (if exists) ---'
+            if [ -f composer.json ]; then
+              composer install --no-dev --optimize-autoloader
+            fi
+
+            echo '--- migrate (if exists) ---'
+            if [ -f scripts/migrate.php ]; then
+              php scripts/migrate.php
+            fi
+
+            echo '--- reload services ---'
+            sudo systemctl restart php8.3-fpm 2>/dev/null || true
+            sudo systemctl reload apache2     2>/dev/null || true
+            sudo systemctl reload nginx       2>/dev/null || true
+          "
