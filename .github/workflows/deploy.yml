@@ -1,4 +1,4 @@
-name: Deploy to server (git pull)
+name: Deploy (git pull on server)
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (fetch + hard reset + migrate + reload)
+      - name: Deploy on server (pull + migrate + reload)
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
@@ -36,15 +36,23 @@ jobs:
 
             cd '${PATH_REMOTE}'
 
-            echo '--- current ---'
+            echo '--- repo ---'
+            git remote -v
+            echo '--- before ---'
             git rev-parse --short HEAD || true
 
-            echo '--- fetch ---'
-            git fetch origin main
+            # Bezpečnost: failni, když je working tree špinavý
+            if [ -n \"\$(git status --porcelain)\" ]; then
+              echo 'ERROR: working tree is dirty on server. Fix it (commit/stash/reset) and retry.'
+              git status --porcelain
+              exit 1
+            fi
 
-            echo '--- hard reset to origin/main ---'
-            git reset --hard origin/main
-            git clean -fd
+            echo '--- pull (ff-only) ---'
+            git pull --ff-only origin main
+
+            echo '--- after ---'
+            git rev-parse --short HEAD
 
             echo '--- composer (if exists) ---'
             if [ -f composer.json ]; then
@@ -60,7 +68,4 @@ jobs:
             sudo systemctl reload php8.3-fpm 2>/dev/null || true
             sudo systemctl reload apache2     2>/dev/null || true
             sudo systemctl reload nginx       2>/dev/null || true
-
-            echo '--- deployed ---'
-            git rev-parse --short HEAD
           "
