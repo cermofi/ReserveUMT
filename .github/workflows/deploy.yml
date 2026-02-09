@@ -1,4 +1,4 @@
-name: Deploy UMT (git pull on server)
+name: Deploy (git pull on server)
 
 on:
   push:
@@ -20,72 +20,52 @@ jobs:
 
       - name: Add known_hosts
         run: |
-          set -euo pipefail
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          # IMPORTANT: use printf to preserve newlines exactly
-          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (safe.directory + git pull + migrate + reload)
+      - name: Deploy on server (pull + migrate + reload)
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT }}
           PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
         run: |
-          set -euo pipefail
-
-          # Minimal sanity (won't print secrets)
-          [ -n "$HOST" ] && [ -n "$USER" ] && [ -n "$PORT" ] && [ -n "$PATH_REMOTE" ]
-
-          ssh -p "$PORT" "$USER@$HOST" "PATH_REMOTE='$PATH_REMOTE' bash -se" <<'EOF'
+          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
             set -euo pipefail
 
-            cd "$PATH_REMOTE"
+            cd '${PATH_REMOTE}'
 
-            # Fix: Git dubious ownership
-            git config --global --add safe.directory "$PATH_REMOTE"
-
-            echo "--- before ---"
+            echo '--- repo ---'
+            git remote -v
+            echo '--- before ---'
             git rev-parse --short HEAD || true
 
-            # Fail if repo is dirty (prevents surprises)
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "ERROR: repo is dirty on server:"
+            # Bezpečnost: failni, když je working tree špinavý
+            if [ -n \"\$(git status --porcelain)\" ]; then
+              echo 'ERROR: working tree is dirty on server. Fix it (commit/stash/reset) and retry.'
               git status --porcelain
               exit 1
             fi
 
-            echo "--- pull (ff-only) ---"
+            echo '--- pull (ff-only) ---'
             git pull --ff-only origin main
 
-            echo "--- after ---"
+            echo '--- after ---'
             git rev-parse --short HEAD
 
-            echo "--- composer (if exists) ---"
+            echo '--- composer (if exists) ---'
             if [ -f composer.json ]; then
               composer install --no-dev --optimize-autoloader
             fi
 
-            echo "--- migrate (if exists) ---"
+            echo '--- migrate (if exists) ---'
             if [ -f scripts/migrate.php ]; then
               php scripts/migrate.php
             fi
 
-            echo "--- reload ---"
-            sudo systemctl reload php8.3-fpm 2>/dev/null || true
+            echo '--- reload services ---'
+            sudo systemctl restart php8.3-fpm 2>/dev/null || true
             sudo systemctl reload apache2     2>/dev/null || true
             sudo systemctl reload nginx       2>/dev/null || true
-EOF
-
-      - name: Health check (optional)
-        env:
-          SITE_URL: ${{ secrets.SITE_URL }}
-        run: |
-          set -euo pipefail
-          if [ -n "${SITE_URL:-}" ]; then
-            curl -fsSIL "$SITE_URL" | head -n 20
-          else
-            echo "SITE_URL not set, skipping health check."
-          fi
+          "
