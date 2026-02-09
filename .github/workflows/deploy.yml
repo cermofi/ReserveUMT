@@ -120,4 +120,3 @@ jobs:
 
             echo '--- deploy OK ---'
             git rev-parse --short HEAD
-EOF
