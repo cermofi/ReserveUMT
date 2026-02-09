@@ -31,23 +31,25 @@ jobs:
           printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (pull + migrate + reload)
+      - name: Deploy on server (pull + migrate + config test + reload)
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT }}
           PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
+          set -euo pipefail
+
+          ssh -p "${PORT}" "${USER}@${HOST}" "PATH_REMOTE='${PATH_REMOTE}' bash -se" <<'EOF'
             set -euo pipefail
 
-            cd '${PATH_REMOTE}'
+            cd "$PATH_REMOTE"
 
             echo '--- before ---'
             git rev-parse --short HEAD || true
 
             # když je repo dirty, fail (ať se to nespálí)
-            if [ -n \"\$(git status --porcelain)\" ]; then
+            if [ -n "$(git status --porcelain)" ]; then
               echo 'ERROR: repo is dirty on server:'
               git status --porcelain
               exit 1
@@ -72,8 +74,26 @@ jobs:
               php scripts/migrate.php
             fi
 
-            echo '--- reload services ---'
-            sudo systemctl restart php8.3-fpm 2>/dev/null || true
-            sudo systemctl reload apache2     2>/dev/null || true
-            sudo systemctl reload nginx       2>/dev/null || true
-          "
+            echo '--- CONFIG TESTS (must pass) ---'
+            echo '[nginx] nginx -t'
+            sudo -n nginx -t
+
+            echo '[apache] apache2ctl -t'
+            if command -v apache2ctl >/dev/null 2>&1; then
+              sudo -n apache2ctl -t
+            else
+              # fallback (někdy je jen apachectl)
+              sudo -n apachectl -t
+            fi
+
+            echo '[php-fpm] php-fpm8.3 -t'
+            sudo -n php-fpm8.3 -t
+
+            echo '--- reload services (only after tests passed) ---'
+            sudo -n systemctl restart php8.3-fpm
+            sudo -n systemctl reload apache2
+            sudo -n systemctl reload nginx
+
+            echo '--- deploy OK ---'
+            git rev-parse --short HEAD
+EOF
