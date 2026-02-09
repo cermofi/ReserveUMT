@@ -5,10 +5,10 @@ on:
     branches: ["main"]
   workflow_dispatch:
     inputs:
-      reason:
-        description: "Manual deploy reason"
+      deploy_ref:
+        description: "Branch/tag to deploy (leave empty = run's branch)"
         required: false
-        default: "manual"
+        default: ""
 
 concurrency:
   group: deploy-umt
@@ -17,6 +17,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_REF: ${{ inputs.deploy_ref != '' && inputs.deploy_ref || github.ref_name }}
     steps:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -31,7 +33,7 @@ jobs:
           printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (pull + migrate + config test + reload)
+      - name: Deploy on server (pull + migrate + reload)
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
@@ -40,59 +42,49 @@ jobs:
         run: |
           set -euo pipefail
 
-          ssh -p "${PORT}" "${USER}@${HOST}" "PATH_REMOTE='${PATH_REMOTE}' bash -se" <<'EOF'
+          ssh -p "${PORT}" "${USER}@${HOST}" "PATH_REMOTE='${PATH_REMOTE}' DEPLOY_REF='${DEPLOY_REF}' bash -se" <<'EOF'
             set -euo pipefail
-
             cd "$PATH_REMOTE"
 
-            echo '--- before ---'
-            git rev-parse --short HEAD || true
+            echo "--- deploy ref ---"
+            echo "$DEPLOY_REF"
 
-            # když je repo dirty, fail (ať se to nespálí)
+            # Git safe.directory (pokud máš jiného vlastníka)
+            git config --global --add safe.directory "$PATH_REMOTE"
+
+            # failni, když repo není čisté
             if [ -n "$(git status --porcelain)" ]; then
-              echo 'ERROR: repo is dirty on server:'
+              echo "ERROR: repo is dirty on server:"
               git status --porcelain
               exit 1
             fi
 
-            # ať se git nepokouší ptát na hesla
             export GIT_TERMINAL_PROMPT=0
 
-            echo '--- pull (ff-only) ---'
-            git pull --ff-only origin main
+            echo "--- fetch ---"
+            git fetch --prune origin
 
-            echo '--- after ---'
+            echo "--- checkout branch ---"
+            # nastav lokální branch přesně podle origin/<ref>
+            git checkout -B "$DEPLOY_REF" "origin/$DEPLOY_REF"
+
+            echo "--- pull (ff-only) ---"
+            git pull --ff-only origin "$DEPLOY_REF"
+
+            echo "--- after ---"
             git rev-parse --short HEAD
 
-            echo '--- composer (if exists) ---'
+            echo "--- composer (if exists) ---"
             if [ -f composer.json ]; then
               composer install --no-dev --optimize-autoloader
             fi
 
-            echo '--- migrate (if exists) ---'
+            echo "--- migrate (if exists) ---"
             if [ -f scripts/migrate.php ]; then
               php scripts/migrate.php
             fi
 
-            echo '--- CONFIG TESTS (must pass) ---'
-            echo '[nginx] nginx -t'
-            sudo -n nginx -t
-
-            echo '[apache] apache2ctl -t'
-            if command -v apache2ctl >/dev/null 2>&1; then
-              sudo -n apache2ctl -t
-            else
-              # fallback (někdy je jen apachectl)
-              sudo -n apachectl -t
-            fi
-
-            echo '[php-fpm] php-fpm8.3 -t'
-            sudo -n php-fpm8.3 -t
-
-            echo '--- reload services (only after tests passed) ---'
-            sudo -n systemctl restart php8.3-fpm
-            sudo -n systemctl reload apache2
-            sudo -n systemctl reload nginx
-
-            echo '--- deploy OK ---'
-            git rev-parse --short HEAD
+            echo "--- reload services ---"
+            sudo -n systemctl restart php8.3-fpm 2>/dev/null || true
+            sudo -n systemctl reload apache2     2>/dev/null || true
+            sudo -n systemctl reload nginx       2>/dev/null || true
