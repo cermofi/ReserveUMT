@@ -1,71 +1,64 @@
-name: Deploy (git pull on server)
+- name: Deploy on server (pull + migrate + reload)
+  env:
+    HOST: ${{ secrets.DEPLOY_HOST }}
+    USER: ${{ secrets.DEPLOY_USER }}
+    PORT: ${{ secrets.DEPLOY_PORT }}
+    PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
+  run: |
+    set -euo pipefail
 
-on:
-  push:
-    branches: ["main"]
-  workflow_dispatch: {}
+    # Debug bez vypsání tajemství (jen ověř že proměnné existují)
+    echo "HOST set? $([ -n "$HOST" ] && echo yes || echo no)"
+    echo "USER set? $([ -n "$USER" ] && echo yes || echo no)"
+    echo "PORT set? $([ -n "$PORT" ] && echo yes || echo no)"
+    echo "PATH_REMOTE set? $([ -n "$PATH_REMOTE" ] && echo yes || echo no)"
+    echo "PATH_REMOTE length: ${#PATH_REMOTE}"
 
-concurrency:
-  group: deploy-umt
-  cancel-in-progress: true
+    ssh -p "$PORT" "$USER@$HOST" "PATH_REMOTE='$PATH_REMOTE' bash -se" <<'EOF'
+      set -euo pipefail
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      echo "--- whoami ---"
+      whoami
+      id
 
-      - name: Add known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+      echo "--- PATH_REMOTE ---"
+      echo "$PATH_REMOTE"
+      ls -ld "$PATH_REMOTE"
 
-      - name: Deploy on server (pull + migrate + reload)
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USER: ${{ secrets.DEPLOY_USER }}
-          PORT: ${{ secrets.DEPLOY_PORT }}
-          PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
-            set -euo pipefail
+      cd "$PATH_REMOTE"
 
-            cd '${PATH_REMOTE}'
+      # Git “dubious ownership” fix (pro tohohle uživatele)
+      git config --global --add safe.directory "$PATH_REMOTE"
 
-            echo '--- repo ---'
-            git remote -v
-            echo '--- before ---'
-            git rev-parse --short HEAD || true
+      echo "--- repo ---"
+      git remote -v
+      git rev-parse --short HEAD || true
 
-            # Bezpečnost: failni, když je working tree špinavý
-            if [ -n \"\$(git status --porcelain)\" ]; then
-              echo 'ERROR: working tree is dirty on server. Fix it (commit/stash/reset) and retry.'
-              git status --porcelain
-              exit 1
-            fi
+      # volitelně: failni, když je repo dirty
+      if [ -n "$(git status --porcelain)" ]; then
+        echo "ERROR: repo is dirty on server:"
+        git status --porcelain
+        exit 1
+      fi
 
-            echo '--- pull (ff-only) ---'
-            git pull --ff-only origin main
+      echo "--- pull (ff-only) ---"
+      git pull --ff-only origin main
 
-            echo '--- after ---'
-            git rev-parse --short HEAD
+      echo "--- after ---"
+      git rev-parse --short HEAD
 
-            echo '--- composer (if exists) ---'
-            if [ -f composer.json ]; then
-              composer install --no-dev --optimize-autoloader
-            fi
+      echo "--- composer (if exists) ---"
+      if [ -f composer.json ]; then
+        composer install --no-dev --optimize-autoloader
+      fi
 
-            echo '--- migrate (if exists) ---'
-            if [ -f scripts/migrate.php ]; then
-              php scripts/migrate.php
-            fi
+      echo "--- migrate (if exists) ---"
+      if [ -f scripts/migrate.php ]; then
+        php scripts/migrate.php
+      fi
 
-            echo '--- reload services ---'
-            sudo systemctl restart php8.3-fpm 2>/dev/null || true
-            sudo systemctl reload apache2     2>/dev/null || true
-            sudo systemctl reload nginx       2>/dev/null || true
-          "
+      echo "--- reload ---"
+      sudo systemctl reload php8.3-fpm 2>/dev/null || true
+      sudo systemctl reload apache2     2>/dev/null || true
+      sudo systemctl reload nginx       2>/dev/null || true
+EOF
