@@ -1,4 +1,4 @@
-name: Deploy (git pull on server)
+name: Deploy UMT to server
 
 on:
   push:
@@ -12,70 +12,83 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # (volitelné, ale fajn) instalace vendor/ pokud používáš composer
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Composer install (if composer.json exists)
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-dev --optimize-autoloader
+          fi
+
+      - name: Basic PHP syntax check (optional)
+        run: |
+          if command -v php >/dev/null 2>&1; then
+            find . -type f -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l
+          fi
+
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add known_hosts (server)
+      - name: Add known_hosts
         run: |
-          set -euo pipefail
           mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (safe.directory + pull + migrate + reload)
+      - name: Rsync code to server
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT }}
           PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
         run: |
-          set -euo pipefail
+          rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "data/" \
+            --exclude "backup/" \
+            --exclude "log/" \
+            --exclude ".env" \
+            --exclude "public/_diag*.php" \
+            -e "ssh -p ${PORT}" \
+            ./ "${USER}@${HOST}:${PATH_REMOTE}/"
 
-          ssh -p "$PORT" "$USER@$HOST" "PATH_REMOTE='$PATH_REMOTE' bash -se" <<'EOF'
-            set -euo pipefail
-            cd "$PATH_REMOTE"
+      - name: Run post-deploy commands (migrate + reload)
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
+          PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
+            set -e
+            cd '${PATH_REMOTE}'
 
-            # Git: povol repo s jiným vlastníkem
-            git config --global --add safe.directory "$PATH_REMOTE"
-
-            echo "--- repo ---"
-            git remote -v
-
-            echo "--- before ---"
-            git rev-parse --short HEAD || true
-
-            # fail, když repo není čisté
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "ERROR: repo is dirty on server:"
-              git status --porcelain
-              exit 1
-            fi
-
-            # ať se git nepokouší ptát na username/password
-            export GIT_TERMINAL_PROMPT=0
-
-            echo "--- pull (ff-only) ---"
-            git pull --ff-only origin main
-
-            echo "--- after ---"
-            git rev-parse --short HEAD
-
-            echo "--- composer (if exists) ---"
-            if [ -f composer.json ]; then
-              composer install --no-dev --optimize-autoloader
-            fi
-
-            echo "--- migrate (if exists) ---"
+            # migrace (idempotentní)
             if [ -f scripts/migrate.php ]; then
               php scripts/migrate.php
             fi
 
-            echo "--- reload ---"
-            sudo systemctl restart php8.3-fpm 2>/dev/null || true
-            sudo systemctl reload apache2     2>/dev/null || true
-            sudo systemctl reload nginx       2>/dev/null || true
-EOF
+            # reload služeb (pokud máš sudo bez hesla pro tyhle příkazy)
+            sudo systemctl reload php8.3-fpm || true
+            sudo systemctl reload nginx || true
+            sudo systemctl reload apache2 || true
+          "
+
+      - name: Health check
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          curl -fsSIL "${SITE_URL}" | head -n 20
