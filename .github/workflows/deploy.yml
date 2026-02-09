@@ -18,54 +18,64 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add known_hosts
+      - name: Add known_hosts (server)
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy on server (pull + migrate + reload)
+      - name: Deploy on server (safe.directory + pull + migrate + reload)
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT }}
           PATH_REMOTE: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -p "${PORT}" "${USER}@${HOST}" bash -lc "
+          set -euo pipefail
+
+          ssh -p "$PORT" "$USER@$HOST" "PATH_REMOTE='$PATH_REMOTE' bash -se" <<'EOF'
             set -euo pipefail
+            cd "$PATH_REMOTE"
 
-            cd '${PATH_REMOTE}'
+            # Git: povol repo s jiným vlastníkem
+            git config --global --add safe.directory "$PATH_REMOTE"
 
-            echo '--- repo ---'
+            echo "--- repo ---"
             git remote -v
-            echo '--- before ---'
+
+            echo "--- before ---"
             git rev-parse --short HEAD || true
 
-            # Bezpečnost: failni, když je working tree špinavý
-            if [ -n \"\$(git status --porcelain)\" ]; then
-              echo 'ERROR: working tree is dirty on server. Fix it (commit/stash/reset) and retry.'
+            # fail, když repo není čisté
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "ERROR: repo is dirty on server:"
               git status --porcelain
               exit 1
             fi
 
-            echo '--- pull (ff-only) ---'
+            # ať se git nepokouší ptát na username/password
+            export GIT_TERMINAL_PROMPT=0
+
+            echo "--- pull (ff-only) ---"
             git pull --ff-only origin main
 
-            echo '--- after ---'
+            echo "--- after ---"
             git rev-parse --short HEAD
 
-            echo '--- composer (if exists) ---'
+            echo "--- composer (if exists) ---"
             if [ -f composer.json ]; then
               composer install --no-dev --optimize-autoloader
             fi
 
-            echo '--- migrate (if exists) ---'
+            echo "--- migrate (if exists) ---"
             if [ -f scripts/migrate.php ]; then
               php scripts/migrate.php
             fi
 
-            echo '--- reload services ---'
+            echo "--- reload ---"
             sudo systemctl restart php8.3-fpm 2>/dev/null || true
             sudo systemctl reload apache2     2>/dev/null || true
             sudo systemctl reload nginx       2>/dev/null || true
-          "
+EOF
