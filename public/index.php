@@ -65,9 +65,8 @@ $weekLabel = $weekStart->format('o-\WW');
         <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
       <div class="legend-split">
-        <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>
-        <span>B = <?= h(space_label('HALF_B')) ?> (vpravo)</span>
-        <span>CELÁ = celá UMT</span>
+        <span>Půlka A = půlka blíž ke vchodu</span><br>
+        <span>Půlka B = půlka dál od vchodu</span>
       </div>
 
       <div class="calendar-wrap">
