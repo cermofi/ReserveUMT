@@ -57,9 +57,12 @@ $weekLabel = $weekStart->format('o-\WW');
       <div class="week-controls">
         <button class="btn ghost" id="week-prev">←</button>
         <button class="btn ghost" id="week-today">Tento týden</button>
+        <button class="btn ghost" id="week-date-trigger" type="button" aria-label="Vybrat datum">
+          <span aria-hidden="true">📅</span>
+        </button>
         <div id="week-label" class="week-label"></div>
         <button class="btn ghost" id="week-next">→</button>
-        <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" />
+        <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
       <div class="legend-split">
         <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>

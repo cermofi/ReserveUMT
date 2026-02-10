@@ -406,6 +406,7 @@
     const next = document.getElementById('week-next');
     const today = document.getElementById('week-today');
     const dateInput = document.getElementById('week-date');
+    const dateTrigger = document.getElementById('week-date-trigger');
 
     const syncDateInput = () => {
       if (!dateInput) return;
@@ -451,6 +452,30 @@
     });
     if (dateInput) {
       dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
+    }
+    if (dateTrigger && dateInput) {
+      const openPicker = () => {
+        if (typeof dateInput.showPicker === 'function') {
+          try {
+            dateInput.showPicker();
+            return;
+          } catch (_) {
+            // fall through to focus+click
+          }
+        }
+        dateInput.focus({ preventScroll: true });
+        dateInput.click();
+      };
+      dateTrigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        openPicker();
+      });
+      dateTrigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPicker();
+        }
+      });
     }
   };
 
