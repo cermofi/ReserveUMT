@@ -225,14 +225,6 @@ $admin = is_admin();
                   <input type="date" name="date" required autocomplete="off" />
                 </label>
                 <label>
-                  Kategorie
-                  <select name="category" required>
-                    <?php foreach (CATEGORIES as $cat): ?>
-                      <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </label>
-                <label>
                   Začátek
                   <input type="time" name="start" required inputmode="numeric" />
                 </label>
@@ -277,14 +269,6 @@ $admin = is_admin();
                 <label>
                   Název
                   <input type="text" name="title" maxlength="80" required autocomplete="off" enterkeyhint="next" />
-                </label>
-                <label>
-                  Kategorie
-                  <select name="category" required>
-                    <?php foreach (CATEGORIES as $cat): ?>
-                      <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
-                    <?php endforeach; ?>
-                  </select>
                 </label>
                 <label>
                   Den v týdnu
@@ -413,14 +397,6 @@ $admin = is_admin();
           <label>
             Datum
             <input type="date" name="date" required autocomplete="off" />
-          </label>
-          <label>
-            Kategorie
-            <select name="category" required>
-              <?php foreach (CATEGORIES as $cat): ?>
-                <option value="<?= h($cat) ?>"><?= h($cat) ?></option>
-              <?php endforeach; ?>
-            </select>
           </label>
           <label>
             Začátek

@@ -159,14 +159,6 @@
   const weekStart = weekStartStr ? parseYmd(weekStartStr) : new Date();
   const totalMinutes = parseHm(gridEnd) - parseHm(gridStart);
 
-  const categoryIndex = (category) => {
-    let hash = 0;
-    for (let i = 0; i < category.length; i++) {
-      hash = (hash * 31 + category.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash) % 8;
-  };
-
   const openModal = (id) => {
     const modal = document.getElementById(id);
     if (!modal) return;
@@ -461,8 +453,7 @@
         }
         item.style.top = `calc(${minutesFromStart} * var(--px-per-min))`;
         item.style.height = `calc(${duration} * var(--px-per-min))`;
-        const idx = categoryIndex(b.category || '');
-        item.classList.add(`cat-${idx}`);
+        item.classList.add('cat-0');
         const displayName = (b.name && b.name.trim()) ? b.name : 'Rezervace';
         const head = document.createElement('div');
         head.className = 'booking-head';
@@ -775,7 +766,6 @@
     form.end.value = formatTime(end);
     form.name.value = booking.name || '';
     if (form.email) form.email.value = booking.email || '';
-    form.category.value = booking.category || 'Jiné';
     form.space.value = booking.space || 'WHOLE';
     if (form.note) form.note.value = booking.note || '';
     if (form.date) setDateLimits(form.date, { setMin: false });
@@ -1003,7 +993,7 @@
         const end = new Date(b.end_ts * 1000);
         row.innerHTML = `
           <div>
-            <div><strong>${b.name}</strong> (${b.category})</div>
+            <div><strong>${b.name}</strong></div>
             <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)} · ${spaceLabels[b.space] || b.space}</div>
           </div>
         `;
@@ -1037,7 +1027,7 @@
         row.className = 'table-row';
         row.innerHTML = `
           <div>
-            <div><strong>${r.title}</strong> (${r.category})</div>
+            <div><strong>${r.title}</strong></div>
             <div class="meta">${r.dow}. den · ${spaceLabels[r.space] || r.space} · ${minutesToTime(r.start_min)}–${minutesToTime(r.end_min)}</div>
           </div>
         `;

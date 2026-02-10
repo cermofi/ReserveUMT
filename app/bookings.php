@@ -167,13 +167,13 @@ function has_conflict(PDO $db, int $start_ts, int $end_ts, string $space, ?int $
 }
 
 function list_bookings(PDO $db, int $from_ts, int $to_ts): array {
-    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, category, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
     $stmt->execute([$to_ts, $from_ts]);
     return $stmt->fetchAll();
 }
 
 function list_bookings_admin(PDO $db, int $from_ts, int $to_ts): array {
-    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, email, category, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, email, space, note FROM bookings WHERE start_ts < ? AND end_ts > ? ORDER BY start_ts');
     $stmt->execute([$to_ts, $from_ts]);
     return $stmt->fetchAll();
 }
@@ -216,7 +216,6 @@ function list_recurring_occurrences(PDO $db, int $from_ts, int $to_ts): array {
                 'start_ts' => $occStart,
                 'end_ts' => $occEnd,
                 'name' => $rule['title'],
-                'category' => $rule['category'],
                 'space' => $rule['space'],
                 'is_recurring' => true,
                 'date_ts' => $day,
@@ -303,7 +302,7 @@ function list_bookings_for_email_token(PDO $db, string $token): array {
     if ($email === null) {
         return [];
     }
-    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, category, space, edit_token FROM bookings WHERE email = ? ORDER BY start_ts DESC');
+    $stmt = $db->prepare('SELECT id, start_ts, end_ts, name, space, edit_token FROM bookings WHERE email = ? ORDER BY start_ts DESC');
     $stmt->execute([$email]);
     $rows = $stmt->fetchAll();
     foreach ($rows as &$row) {
@@ -320,7 +319,6 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $end = trim((string) ($data['end'] ?? ''));
     $name = trim((string) ($data['name'] ?? ''));
     $email = strtolower(trim((string) ($data['email'] ?? '')));
-    $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
     $note = trim((string) ($data['note'] ?? ''));
 
@@ -339,11 +337,6 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
         if ($email !== '' && !validate_email_addr($email)) {
             return ['ok' => false, 'error' => 'Neplatný e-mail.'];
         }
-    }
-    if ($category === '') {
-        $category = 'Soukromá';
-    } elseif (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
@@ -396,8 +389,8 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
                 $db->exec('COMMIT');
                 return ['ok' => false, 'error' => 'Termín je obsazený.'];
             }
-            $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, time(), $ip, 'CONFIRMED']);
+            $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $ins->execute([$start_ts, $end_ts, $name, $email, $space, $note, time(), $ip, 'CONFIRMED']);
             $bookingId = (int) $db->lastInsertId();
             $db->exec('COMMIT');
             log_audit($db, 'booking_created_no_verify', 'public', $ip, [
@@ -420,8 +413,8 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     $codeHash = password_hash($code, PASSWORD_DEFAULT);
     $expires = time() + 600;
 
-    $stmt = $db->prepare('INSERT INTO pending_bookings(start_ts, end_ts, name, email, category, space, note, code_hash, code_expires_ts, created_ts, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, $codeHash, $expires, time(), $ip]);
+    $stmt = $db->prepare('INSERT INTO pending_bookings(start_ts, end_ts, name, email, space, note, code_hash, code_expires_ts, created_ts, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$start_ts, $end_ts, $name, $email, $space, $note, $codeHash, $expires, time(), $ip]);
     $pendingId = (int) $db->lastInsertId();
 
     if (!send_verification_email($email, $code)) {
@@ -484,8 +477,8 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
 
-        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $ins->execute([$start_ts, $end_ts, $pending['name'], $pending['email'], $pending['category'], $space, $pending['note'], time(), $ip, 'CONFIRMED']);
+        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins->execute([$start_ts, $end_ts, $pending['name'], $pending['email'], $space, $pending['note'], time(), $ip, 'CONFIRMED']);
         $bookingId = (int) $db->lastInsertId();
         $db->prepare('DELETE FROM pending_bookings WHERE id = ?')->execute([$pendingId]);
         $db->exec('COMMIT');
@@ -512,7 +505,6 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     $end = trim((string) ($data['end'] ?? ''));
     $name = trim((string) ($data['name'] ?? ''));
     $email = strtolower(trim((string) ($data['email'] ?? '')));
-    $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
     $note = trim((string) ($data['note'] ?? ''));
 
@@ -524,9 +516,6 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
     }
     if ($email !== '' && !validate_email_addr($email)) {
         return ['ok' => false, 'error' => 'Neplatný e-mail.'];
-    }
-    if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
@@ -552,8 +541,8 @@ function admin_create_booking(PDO $db, array $data, string $ip): array {
             $db->exec('COMMIT');
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
-        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, category, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $ins->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, time(), $ip, 'CONFIRMED']);
+        $ins = $db->prepare('INSERT INTO bookings(start_ts, end_ts, name, email, space, note, created_ts, created_ip, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins->execute([$start_ts, $end_ts, $name, $email, $space, $note, time(), $ip, 'CONFIRMED']);
         $bookingId = (int) $db->lastInsertId();
         $db->exec('COMMIT');
         log_audit($db, 'admin_booking_created', 'admin', $ip, ['booking_id' => $bookingId]);
@@ -580,7 +569,6 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
     $end = trim((string) ($data['end'] ?? ''));
     $name = trim((string) ($data['name'] ?? ''));
     $email = strtolower(trim((string) ($data['email'] ?? '')));
-    $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
     $note = trim((string) ($data['note'] ?? ''));
 
@@ -592,9 +580,6 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
     }
     if ($email !== '' && !validate_email_addr($email)) {
         return ['ok' => false, 'error' => 'Neplatný e-mail.'];
-    }
-    if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
@@ -620,8 +605,8 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
             $db->exec('COMMIT');
             return ['ok' => false, 'error' => 'Termín je obsazený.'];
         }
-        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, email = ?, category = ?, space = ?, note = ? WHERE id = ?');
-        $stmt->execute([$start_ts, $end_ts, $name, $email, $category, $space, $note, $id]);
+        $stmt = $db->prepare('UPDATE bookings SET start_ts = ?, end_ts = ?, name = ?, email = ?, space = ?, note = ? WHERE id = ?');
+        $stmt->execute([$start_ts, $end_ts, $name, $email, $space, $note, $id]);
         $db->exec('COMMIT');
         log_audit($db, 'admin_booking_updated', 'admin', $ip, ['booking_id' => $id]);
         return ['ok' => true];
@@ -635,7 +620,6 @@ function admin_update_booking(PDO $db, int $id, array $data, string $ip): array 
 
 function admin_create_recurring(PDO $db, array $data, string $ip): array {
     $title = trim((string) ($data['title'] ?? ''));
-    $category = trim((string) ($data['category'] ?? ''));
     $space = trim((string) ($data['space'] ?? ''));
     $dow = (int) ($data['dow'] ?? 0);
     $start = trim((string) ($data['start'] ?? ''));
@@ -645,9 +629,6 @@ function admin_create_recurring(PDO $db, array $data, string $ip): array {
 
     if ($title === '' || mb_strlen($title) > 80) {
         return ['ok' => false, 'error' => 'Neplatný název.'];
-    }
-    if (!in_array($category, CATEGORIES, true)) {
-        return ['ok' => false, 'error' => 'Neplatná kategorie.'];
     }
     if (!in_array($space, SPACES, true)) {
         return ['ok' => false, 'error' => 'Neplatná volba prostoru.'];
@@ -692,8 +673,8 @@ function admin_create_recurring(PDO $db, array $data, string $ip): array {
         }
     }
 
-    $stmt = $db->prepare('INSERT INTO recurring_rules(title, category, space, dow, start_min, end_min, start_date, end_date, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$title, $category, $space, $dow, $startMin, $endMin, $startDateTs, $endDateTs, time()]);
+    $stmt = $db->prepare('INSERT INTO recurring_rules(title, space, dow, start_min, end_min, start_date, end_date, created_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$title, $space, $dow, $startMin, $endMin, $startDateTs, $endDateTs, time()]);
     $ruleId = (int) $db->lastInsertId();
     log_audit($db, 'admin_recurring_created', 'admin', $ip, ['rule_id' => $ruleId]);
     return ['ok' => true, 'rule_id' => $ruleId];
@@ -718,6 +699,7 @@ function public_update_booking(PDO $db, string $token, array $data, string $ip):
     if (!$booking) {
         return ['ok' => false, 'error' => 'Rezervace nenalezena.'];
     }
+    $email = (string) ($booking['email'] ?? '');
 
     $date = trim((string) ($data['date'] ?? ''));
     $start = trim((string) ($data['start'] ?? ''));
