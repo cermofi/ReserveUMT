@@ -425,13 +425,16 @@ input:focus, select:focus {
 .day-subheader {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
   font-size: 11px;
   color: var(--muted);
   padding: 4px 10px 6px;
   border-bottom: 1px solid var(--border);
 }
 .day-subheader .right {
-  text-align: right;
+  text-align: center;
 }
 
 .day-track {
