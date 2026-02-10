@@ -39,7 +39,15 @@ if ($action === 'list') {
 if ($action === 'settings') {
     $requireVerify = get_setting($db, 'require_email_verification', '1');
     $maxAdvance = max_advance_days($db);
-    respond_json(['ok' => true, 'require_email_verification' => $requireVerify, 'max_advance_booking_days' => $maxAdvance]);
+    $maxEmail = max_reservations_per_email($db);
+    $maxDuration = max_reservation_duration_hours($db);
+    respond_json([
+        'ok' => true,
+        'require_email_verification' => $requireVerify,
+        'max_advance_booking_days' => $maxAdvance,
+        'max_reservations_per_email' => $maxEmail,
+        'max_reservation_duration_hours' => $maxDuration,
+    ]);
 }
 
 require_post();

@@ -4,6 +4,8 @@
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
   let maxAdvanceDays = 30;
+  let maxEmailReservations = 0;
+  let maxDurationHours = 2;
   const updateAdvanceHint = () => {
     const el = document.getElementById('max-advance-hint');
     if (!el) return;
@@ -13,6 +15,30 @@
       return;
     }
     el.textContent = `Rezervace je možné udělat ${maxAdvanceDays} dní dopředu.`;
+    el.style.display = 'block';
+  };
+
+  const updateEmailHint = () => {
+    const el = document.getElementById('max-email-hint');
+    if (!el) return;
+    if (!maxEmailReservations || maxEmailReservations <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    el.textContent = `Maximální počet rezervací na jeden e-mail je ${maxEmailReservations}.`;
+    el.style.display = 'block';
+  };
+
+  const updateDurationHint = () => {
+    const el = document.getElementById('max-duration-hint');
+    if (!el) return;
+    if (!maxDurationHours || maxDurationHours <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    el.textContent = `Maximální délka rezervace je ${maxDurationHours} hodin.`;
     el.style.display = 'block';
   };
   const weekStartStr = body.dataset.weekStart;
@@ -467,6 +493,16 @@
         const formAdminBook = document.getElementById('form-admin-book');
         if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
       }
+      if (typeof res.max_reservations_per_email === 'number') {
+        maxEmailReservations = res.max_reservations_per_email;
+        const inputMaxEmail = document.getElementById('input-max-email');
+        if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
+      }
+      if (typeof res.max_reservation_duration_hours === 'number') {
+        maxDurationHours = res.max_reservation_duration_hours;
+        const inputMaxDur = document.getElementById('input-max-duration');
+        if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
+      }
       return;
     }
     const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
@@ -627,6 +663,8 @@
     const durationWarning = document.getElementById('duration-warning');
     applyMaxLimitsToForm();
     updateAdvanceHint();
+    updateEmailHint();
+    updateDurationHint();
     if (btnNew) {
       btnNew.addEventListener('click', () => {
         const today = new Date();
@@ -662,14 +700,21 @@
         if (typeof res.max_advance_booking_days === 'number') {
           maxAdvanceDays = res.max_advance_booking_days;
         }
+        if (typeof res.max_reservations_per_email === 'number') {
+          maxEmailReservations = res.max_reservations_per_email;
+        }
+        if (typeof res.max_reservation_duration_hours === 'number') {
+          maxDurationHours = res.max_reservation_duration_hours;
+        }
         applyMaxLimitsToForm();
         updateAdvanceHint();
+        updateEmailHint();
+        updateDurationHint();
       })
       .catch(() => {
         applyVerifySetting(true);
       });
 
-    const maxDurationMinutes = 120;
     const updateDurationWarning = () => {
       if (!formReserve || !durationWarning) return;
       const start = formReserve.start.value;
@@ -679,9 +724,10 @@
         durationWarning.textContent = '';
         return;
       }
+      const maxDurationMinutes = (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
       const duration = parseHm(end) - parseHm(start);
-      if (duration > maxDurationMinutes) {
-        durationWarning.textContent = 'Délka rezervace přesahuje 2 hodiny.';
+      if (maxDurationMinutes > 0 && duration > maxDurationMinutes) {
+        durationWarning.textContent = `Délka rezervace přesahuje ${maxDurationHours} hodin.`;
         durationWarning.classList.add('show');
       } else {
         durationWarning.classList.remove('show');
@@ -1013,6 +1059,52 @@
           maxAdvanceDays = parseInt(val, 10);
           const formAdminBook = document.getElementById('form-admin-book');
           if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
+    const inputMaxEmail = document.getElementById('input-max-email');
+    if (inputMaxEmail) {
+      inputMaxEmail.addEventListener('change', async () => {
+        const val = inputMaxEmail.value.trim();
+        if (!/^\d+$/.test(val)) {
+          showToast('Zadejte celé číslo.');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_reservations_per_email',
+            value: val
+          });
+          maxEmailReservations = parseInt(val, 10);
+          updateEmailHint();
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
+    const inputMaxDuration = document.getElementById('input-max-duration');
+    if (inputMaxDuration) {
+      inputMaxDuration.addEventListener('change', async () => {
+        const val = inputMaxDuration.value.trim();
+        if (!/^\\d+(\\.\\d+)?$/.test(val)) {
+          showToast('Zadejte číslo (hodiny).');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_reservation_duration_hours',
+            value: val
+          });
+          maxDurationHours = parseFloat(val);
+          updateDurationHint();
           showToast('Nastavení uloženo.');
         } catch (err) {
           showToast(err.message);

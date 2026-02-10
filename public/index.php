@@ -114,7 +114,7 @@ $weekLabel = $weekStart->format('o-\WW');
               </div>
             </label>
           </div>
-          <div class="hint full-span">Maximální délka veřejné rezervace je 2 hodiny.</div>
+          <div class="hint full-span" id="max-duration-hint" style="display:none; margin-top:-4px;"></div>
           <div class="warning full-span" id="duration-warning" aria-live="polite"></div>
           <label>
             Prostor
@@ -132,11 +132,12 @@ $weekLabel = $weekStart->format('o-\WW');
             Poznámka (neveřejná)
             <textarea name="note" rows="2" maxlength="500" autocomplete="off" enterkeyhint="done"></textarea>
           </label>
+          <label id="field-email" class="full-span">
+            E-mail
+            <input type="email" name="email" required autocomplete="email" inputmode="email" enterkeyhint="done" />
+          </label>
+          <div class="hint full-span" id="max-email-hint" style="display:none;"></div>
         </div>
-        <label id="field-email">
-          E-mail
-          <input type="email" name="email" required autocomplete="email" inputmode="email" enterkeyhint="done" />
-        </label>
         <div class="hint">Půlka A = levá část, Půlka B = pravá část. Popisky lze změnit v konfiguraci.</div>
         <button class="btn primary" type="submit">
           <span class="btn-text">Odeslat žádost</span>

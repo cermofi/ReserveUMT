@@ -111,6 +111,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
     $requireVerify = get_setting($db, 'require_email_verification', '1');
     $maxAdvance = max_advance_days($db);
+    $maxEmail = max_reservations_per_email($db);
+    $maxDuration = max_reservation_duration_hours($db);
     respond_json([
         'ok' => true,
         'bookings' => $bookings,
@@ -119,24 +121,34 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         'audit' => $audit,
         'require_email_verification' => $requireVerify,
         'max_advance_booking_days' => $maxAdvance,
+        'max_reservations_per_email' => $maxEmail,
+        'max_reservation_duration_hours' => $maxDuration,
     ]);
   }
 
-  if ($action === 'set_setting') {
-    $key = (string) ($_POST['key'] ?? '');
-    $value = (string) ($_POST['value'] ?? '');
-    if ($key === 'require_email_verification') {
-        if (!in_array($value, ['0', '1'], true)) {
+    if ($action === 'set_setting') {
+        $key = (string) ($_POST['key'] ?? '');
+        $value = (string) ($_POST['value'] ?? '');
+        if ($key === 'require_email_verification') {
+            if (!in_array($value, ['0', '1'], true)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_advance_booking_days') {
+            if (!preg_match('/^\d+$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_reservations_per_email') {
+            if (!preg_match('/^\d+$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_reservation_duration_hours') {
+            if (!preg_match('/^\\d+(\\.\\d+)?$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } else {
             fail_json('Neplatné nastavení.');
         }
-    } elseif ($key === 'max_advance_booking_days') {
-        if (!preg_match('/^\d+$/', $value)) {
-            fail_json('Neplatné nastavení.');
-        }
-    } else {
-        fail_json('Neplatné nastavení.');
-    }
-    set_setting($db, $key, $value);
+        set_setting($db, $key, $value);
         log_audit($db, 'admin_setting_updated', 'admin', $ip, ['key' => $key, 'value' => $value]);
         respond_json(['ok' => true]);
     }
@@ -348,6 +360,16 @@ $admin = is_admin();
               <input type="number" id="input-max-advance" min="0" step="1" autocomplete="off" />
             </label>
             <div class="hint">0 = bez omezení. Výchozí je 30 dní.</div>
+            <label>
+              Maximální počet rezervací na jeden e-mail
+              <input type="number" id="input-max-email" min="0" step="1" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení.</div>
+            <label>
+              Maximální délka rezervace (hodiny)
+              <input type="number" id="input-max-duration" min="0" step="0.25" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení.</div>
           </div>
         </section>
 

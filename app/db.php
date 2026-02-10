@@ -116,6 +116,8 @@ function migrate(PDO $db): void {
 
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('max_advance_booking_days', '30')")->execute();
+    $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('max_reservations_per_email', '0')")->execute();
+    $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('max_reservation_duration_hours', '2')")->execute();
 
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_start_end ON bookings(start_ts, end_ts)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_space ON bookings(space)");
