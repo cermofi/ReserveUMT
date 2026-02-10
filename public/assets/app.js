@@ -525,7 +525,11 @@
     const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
     const durationWarning = document.getElementById('duration-warning');
     if (btnNew) {
-      btnNew.addEventListener('click', () => openReservationModal(formatYmd(weekStart), parseHm(gridStart), parseHm(gridStart) + stepMin));
+      btnNew.addEventListener('click', () => {
+        const today = new Date();
+        const todayYmd = formatYmd(today);
+        openReservationModal(todayYmd, parseHm(gridStart), parseHm(gridStart) + stepMin);
+      });
     }
 
     const formReserve = document.getElementById('form-reserve');
