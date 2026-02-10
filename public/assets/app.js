@@ -37,6 +37,7 @@
       const form = document.getElementById('form-reserve');
       if (form && form.date) {
         setDateLimits(form.date);
+        preventDateClear(form.date);
       }
       const weekDate = document.getElementById('week-date');
       if (weekDate) setDateLimits(weekDate);
@@ -92,6 +93,19 @@
     const limit = maxAllowedDate();
     if (limit) input.max = limit; else input.removeAttribute('max');
     if (setMin) input.min = todayYmd(); else input.removeAttribute('min');
+  };
+
+  const preventDateClear = (input) => {
+    if (!input || input.dataset.noclear === '1') return;
+    input.dataset.noclear = '1';
+    input.dataset.prevDate = input.value || todayYmd();
+    input.addEventListener('input', () => {
+      if (input.value === '') {
+        input.value = input.dataset.prevDate || todayYmd();
+      } else {
+        input.dataset.prevDate = input.value;
+      }
+    });
   };
 
   const weekStart = weekStartStr ? parseYmd(weekStartStr) : new Date();
@@ -567,6 +581,7 @@
       return;
     }
     form.date.value = dateStr;
+    form.date.dataset.prevDate = form.date.value;
     const baseDate = parseYmd(dateStr);
     const start = new Date(baseDate);
     start.setHours(0, 0, 0, 0);
