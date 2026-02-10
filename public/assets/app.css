@@ -495,14 +495,14 @@ input:focus, select:focus {
   border-radius: 12px;
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: none;
   color: var(--text);
   font-size: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
   min-width: 0;
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
@@ -510,8 +510,8 @@ input:focus, select:focus {
 
 .booking:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .booking:focus-visible {
@@ -674,14 +674,14 @@ input:focus, select:focus {
   flex-wrap: wrap;
 }
 
-.cat-0 { background: color-mix(in srgb, var(--cat-0) 25%, transparent); border: 1px solid var(--cat-0); }
-.cat-1 { background: color-mix(in srgb, var(--cat-1) 25%, transparent); border: 1px solid var(--cat-1); }
-.cat-2 { background: color-mix(in srgb, var(--cat-2) 25%, transparent); border: 1px solid var(--cat-2); }
-.cat-3 { background: color-mix(in srgb, var(--cat-3) 25%, transparent); border: 1px solid var(--cat-3); }
-.cat-4 { background: color-mix(in srgb, var(--cat-4) 25%, transparent); border: 1px solid var(--cat-4); }
-.cat-5 { background: color-mix(in srgb, var(--cat-5) 25%, transparent); border: 1px solid var(--cat-5); }
-.cat-6 { background: color-mix(in srgb, var(--cat-6) 25%, transparent); border: 1px solid var(--cat-6); }
-.cat-7 { background: color-mix(in srgb, var(--cat-7) 25%, transparent); border: 1px solid var(--cat-7); }
+.cat-0 { background: color-mix(in srgb, var(--cat-0) 25%, transparent); border: none; }
+.cat-1 { background: color-mix(in srgb, var(--cat-1) 25%, transparent); border: none; }
+.cat-2 { background: color-mix(in srgb, var(--cat-2) 25%, transparent); border: none; }
+.cat-3 { background: color-mix(in srgb, var(--cat-3) 25%, transparent); border: none; }
+.cat-4 { background: color-mix(in srgb, var(--cat-4) 25%, transparent); border: none; }
+.cat-5 { background: color-mix(in srgb, var(--cat-5) 25%, transparent); border: none; }
+.cat-6 { background: color-mix(in srgb, var(--cat-6) 25%, transparent); border: none; }
+.cat-7 { background: color-mix(in srgb, var(--cat-7) 25%, transparent); border: none; }
 
 .modal {
   position: fixed;
