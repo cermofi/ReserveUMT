@@ -65,6 +65,8 @@ function enforce_duration_limit(PDO $db, int $start_ts, int $end_ts): ?array {
 
 function enforce_email_limit(PDO $db, string $email): ?array {
     $limit = max_reservations_per_email($db);
+    $requireEmail = get_setting($db, 'require_email_verification', '1') === '1';
+    if (!$requireEmail) return null;
     if ($limit === 0) return null;
     if ($email === '') return null; // no email -> cannot count
     $now = time();

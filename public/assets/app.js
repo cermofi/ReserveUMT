@@ -30,7 +30,8 @@
   const updateEmailHint = () => {
     const el = document.getElementById('max-email-hint');
     if (!el) return;
-    if (!maxEmailReservations || maxEmailReservations <= 0) {
+    const requireEmail = requireEmailVerification;
+    if (!requireEmail || !maxEmailReservations || maxEmailReservations <= 0) {
       el.style.display = 'none';
       el.textContent = '';
       return;
@@ -744,7 +745,9 @@
 
     fetchJson('/api.php?action=settings')
       .then((res) => {
-        applyVerifySetting(String(res.require_email_verification || '1') === '1');
+        const requireVerify = String(res.require_email_verification || '1') === '1';
+        applyVerifySetting(requireVerify);
+        requireEmailVerification = requireVerify;
         if (typeof res.max_advance_booking_days === 'number') {
           maxAdvanceDays = res.max_advance_booking_days;
         }
