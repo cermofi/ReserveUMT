@@ -1124,7 +1124,12 @@
     if (inputMaxDuration) {
       inputMaxDuration.addEventListener('change', async () => {
         const val = inputMaxDuration.value.trim();
-        if (!/^\\d+(\\.\\d+)?$/.test(val)) {
+        if (!/^\d+(\.\d+)?$/.test(val)) {
+          showToast('Zadejte číslo (hodiny).');
+          return;
+        }
+        const num = parseFloat(val);
+        if (!Number.isFinite(num) || num < 0) {
           showToast('Zadejte číslo (hodiny).');
           return;
         }
@@ -1132,9 +1137,9 @@
           await adminPost({
             action: 'set_setting',
             key: 'max_reservation_duration_hours',
-            value: val
+            value: String(num)
           });
-          maxDurationHours = parseFloat(val);
+          maxDurationHours = num;
           updateDurationHint();
           showToast('Nastavení uloženo.');
         } catch (err) {
