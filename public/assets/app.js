@@ -3,6 +3,7 @@
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
+  let maxAdvanceDays = 30;
   const weekStartStr = body.dataset.weekStart;
   const gridStart = body.dataset.gridStart || '06:00';
   const gridEnd = body.dataset.gridEnd || '23:00';
@@ -14,12 +15,21 @@
   };
 
   const toastEl = document.getElementById('toast');
-  const showToast = (msg) => {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    setTimeout(() => toastEl.classList.remove('show'), 3200);
-  };
+    const showToast = (msg) => {
+      if (!toastEl) return;
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 3200);
+    };
+
+    const applyMaxLimitsToForm = () => {
+      const form = document.getElementById('form-reserve');
+      if (form && form.date) {
+        setDateLimits(form.date);
+      }
+      const weekDate = document.getElementById('week-date');
+      if (weekDate) setDateLimits(weekDate);
+    };
 
   const parseYmd = (ymd) => {
     const [y, m, d] = ymd.split('-').map(Number);
@@ -48,6 +58,29 @@
   const parseHm = (str) => {
     const [h, m] = str.split(':').map(Number);
     return h * 60 + m;
+  };
+
+  const todayYmd = () => formatYmd(new Date());
+
+  const maxAllowedDate = () => {
+    if (maxAdvanceDays === 0) return null;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + maxAdvanceDays);
+    return formatYmd(d);
+  };
+
+  const isWithinMaxLimit = (ymd) => {
+    const limit = maxAllowedDate();
+    if (!limit) return true;
+    return ymd <= limit;
+  };
+
+  const setDateLimits = (input, { setMin = false } = {}) => {
+    if (!input) return;
+    const limit = maxAllowedDate();
+    if (limit) input.max = limit; else input.removeAttribute('max');
+    if (setMin) input.min = todayYmd(); else input.removeAttribute('min');
   };
 
   const weekStart = weekStartStr ? parseYmd(weekStartStr) : new Date();
@@ -203,6 +236,10 @@
         if (page !== 'public') return;
         if (e.button !== 0) return;
         if (e.target && e.target.classList.contains('booking')) return;
+        if (!isWithinMaxLimit(ymd)) {
+          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+          return;
+        }
         e.preventDefault();
         dragActive = true;
         dragMoved = false;
@@ -235,6 +272,10 @@
         const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
         const start = startMin + minutes;
         const end = start + stepMin;
+        if (!isWithinMaxLimit(ymd)) {
+          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+          return;
+        }
         openReservationModal(ymd, start, end);
       });
 
@@ -394,6 +435,13 @@
       if (toggle) {
         toggle.checked = String(res.require_email_verification || '1') === '1';
       }
+      if (typeof res.max_advance_booking_days === 'number') {
+        maxAdvanceDays = res.max_advance_booking_days;
+        const inputMax = document.getElementById('input-max-advance');
+        if (inputMax) inputMax.value = String(maxAdvanceDays);
+        const formAdminBook = document.getElementById('form-admin-book');
+        if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+      }
       return;
     }
     const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
@@ -422,6 +470,13 @@
       const diff = (day === 0 ? -6 : 1 - day);
       monday.setDate(monday.getDate() + diff);
       monday.setHours(0, 0, 0, 0);
+      const targetYmd = formatYmd(monday);
+      const limit = maxAllowedDate();
+      if (limit && targetYmd > limit) {
+        showToast('Nelze zobrazit týden tak daleko dopředu.');
+        syncDateInput();
+        return;
+      }
       weekStart.setTime(monday.getTime());
       loadWeek();
       syncDateInput();
@@ -447,11 +502,24 @@
     });
     if (next) next.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() + 7);
+      const limit = maxAllowedDate();
+      const targetYmd = formatYmd(weekStart);
+      if (limit && targetYmd > limit) {
+        weekStart.setDate(weekStart.getDate() - 7);
+        showToast('Nelze zobrazit týden tak daleko dopředu.');
+        return;
+      }
       loadWeek();
       syncDateInput();
     });
     if (dateInput) {
       dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
+      const limit = maxAllowedDate();
+      if (limit) {
+        dateInput.max = limit;
+      } else {
+        dateInput.removeAttribute('max');
+      }
     }
     if (dateTrigger && dateInput) {
       const openPicker = () => {
@@ -482,6 +550,11 @@
   const openReservationModal = (dateStr, startMin, endMin) => {
     const form = document.getElementById('form-reserve');
     if (!form) return;
+    const limit = maxAllowedDate();
+    if (limit && dateStr > limit) {
+      showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+      return;
+    }
     form.date.value = dateStr;
     const baseDate = parseYmd(dateStr);
     const start = new Date(baseDate);
@@ -492,6 +565,7 @@
     end.setMinutes(endMin);
     form.start.value = formatTime(start);
     form.end.value = formatTime(end);
+    if (limit) form.date.max = limit; else form.date.removeAttribute('max');
     openModal('modal-reserve');
   };
 
@@ -509,6 +583,7 @@
     form.category.value = booking.category || 'Jiné';
     form.space.value = booking.space || 'WHOLE';
     if (form.note) form.note.value = booking.note || '';
+    if (form.date) setDateLimits(form.date, { setMin: false });
     openModal('modal-edit');
   };
 
@@ -519,21 +594,27 @@
     return el;
   })();
 
-  const initPublicForms = () => {
+    const initPublicForms = () => {
     const btnNew = document.getElementById('btn-new');
     const emailField = document.getElementById('field-email');
     const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
     const durationWarning = document.getElementById('duration-warning');
+    applyMaxLimitsToForm();
     if (btnNew) {
       btnNew.addEventListener('click', () => {
         const today = new Date();
         const todayYmd = formatYmd(today);
-        openReservationModal(todayYmd, parseHm(gridStart), parseHm(gridStart) + stepMin);
-      });
-    }
+        const limit = maxAllowedDate();
+          if (limit && todayYmd > limit) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          openReservationModal(todayYmd, parseHm(gridStart), parseHm(gridStart) + stepMin);
+        });
+      }
 
-    const formReserve = document.getElementById('form-reserve');
-    const formVerify = document.getElementById('form-verify');
+      const formReserve = document.getElementById('form-reserve');
+      const formVerify = document.getElementById('form-verify');
     let verifyTimer = null;
 
     const applyVerifySetting = (requireVerify) => {
@@ -549,7 +630,13 @@
     };
 
     fetchJson('/api.php?action=settings')
-      .then((res) => applyVerifySetting(String(res.require_email_verification || '1') === '1'))
+      .then((res) => {
+        applyVerifySetting(String(res.require_email_verification || '1') === '1');
+        if (typeof res.max_advance_booking_days === 'number') {
+          maxAdvanceDays = res.max_advance_booking_days;
+        }
+        applyMaxLimitsToForm();
+      })
       .catch(() => {
         applyVerifySetting(true);
       });
@@ -574,8 +661,8 @@
       }
     };
 
-    if (formReserve) {
-      formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
+      if (formReserve) {
+        formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const field = btn.dataset.timeAdjust;
           const delta = parseInt(btn.dataset.delta || '0', 10);
@@ -589,8 +676,9 @@
         });
       });
 
-      formReserve.start.addEventListener('change', updateDurationWarning);
-      formReserve.end.addEventListener('change', updateDurationWarning);
+        formReserve.start.addEventListener('change', updateDurationWarning);
+        formReserve.end.addEventListener('change', updateDurationWarning);
+        applyMaxLimitsToForm();
       formReserve.addEventListener('submit', async (e) => {
         e.preventDefault();
         const duration = parseHm(formReserve.end.value || '00:00') - parseHm(formReserve.start.value || '00:00');
@@ -817,12 +905,20 @@
 
     const formAdminBook = document.getElementById('form-admin-book');
     if (formAdminBook) {
+      setDateLimits(formAdminBook.date, { setMin: true });
       formAdminBook.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = formAdminBook.querySelector('button[type="submit"]');
         setLoading(btn, true);
         try {
           const data = new URLSearchParams(new FormData(formAdminBook));
+          const dateVal = formAdminBook.date?.value || '';
+          const limit = maxAllowedDate();
+          if (limit && dateVal > limit) {
+            showToast('Rezervaci nelze vytvořit tak daleko dopředu.');
+            setLoading(btn, false);
+            return;
+          }
           await fetchJson('/admin.php', { method: 'POST', body: data });
           showToast('Rezervace vytvořena.');
           formAdminBook.reset();
@@ -872,6 +968,30 @@
       });
     }
 
+    const inputMax = document.getElementById('input-max-advance');
+    if (inputMax) {
+      inputMax.addEventListener('change', async () => {
+        const val = inputMax.value.trim();
+        if (!/^\d+$/.test(val)) {
+          showToast('Zadejte celé číslo.');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_advance_booking_days',
+            value: val
+          });
+          maxAdvanceDays = parseInt(val, 10);
+          const formAdminBook = document.getElementById('form-admin-book');
+          if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
     const clearRate = document.getElementById('btn-clear-rate');
     if (clearRate) {
       clearRate.addEventListener('click', async () => {
@@ -893,6 +1013,13 @@
         setLoading(btn, true);
         try {
           const data = new URLSearchParams(new FormData(formEdit));
+          const dateVal = formEdit.date?.value || '';
+          const limit = maxAllowedDate();
+          if (limit && dateVal > limit) {
+            showToast('Rezervaci nelze upravit tak daleko dopředu.');
+            setLoading(btn, false);
+            return;
+          }
           await fetchJson('/admin.php', { method: 'POST', body: data });
           showToast('Rezervace upravena.');
           closeModal('modal-edit');

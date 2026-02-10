@@ -99,34 +99,44 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
         respond_json(admin_delete_occurrence($db, $ruleId, $dateTs, $ip));
     }
-    if ($action === 'list_admin') {
-        $from = (int) ($_POST['from'] ?? 0);
-        $to = (int) ($_POST['to'] ?? 0);
-        if ($from <= 0 || $to <= 0 || $to <= $from) {
-            fail_json('Invalid range');
-        }
-        $bookings = list_bookings_admin($db, $from, $to);
-        $recurring = list_recurring_occurrences($db, $from, $to);
-        $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
-        $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
-        $requireVerify = get_setting($db, 'require_email_verification', '1');
-        respond_json([
-            'ok' => true,
-            'bookings' => $bookings,
-            'recurring' => $recurring,
-            'rules' => $rules,
-            'audit' => $audit,
-            'require_email_verification' => $requireVerify,
-        ]);
+  if ($action === 'list_admin') {
+    $from = (int) ($_POST['from'] ?? 0);
+    $to = (int) ($_POST['to'] ?? 0);
+    if ($from <= 0 || $to <= 0 || $to <= $from) {
+      fail_json('Invalid range');
     }
+    $bookings = list_bookings_admin($db, $from, $to);
+    $recurring = list_recurring_occurrences($db, $from, $to);
+    $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
+    $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
+    $requireVerify = get_setting($db, 'require_email_verification', '1');
+    $maxAdvance = max_advance_days($db);
+    respond_json([
+        'ok' => true,
+        'bookings' => $bookings,
+        'recurring' => $recurring,
+        'rules' => $rules,
+        'audit' => $audit,
+        'require_email_verification' => $requireVerify,
+        'max_advance_booking_days' => $maxAdvance,
+    ]);
+  }
 
-    if ($action === 'set_setting') {
-        $key = (string) ($_POST['key'] ?? '');
-        $value = (string) ($_POST['value'] ?? '');
-        if ($key !== 'require_email_verification' || !in_array($value, ['0', '1'], true)) {
+  if ($action === 'set_setting') {
+    $key = (string) ($_POST['key'] ?? '');
+    $value = (string) ($_POST['value'] ?? '');
+    if ($key === 'require_email_verification') {
+        if (!in_array($value, ['0', '1'], true)) {
             fail_json('Neplatné nastavení.');
         }
-        set_setting($db, $key, $value);
+    } elseif ($key === 'max_advance_booking_days') {
+        if (!preg_match('/^\d+$/', $value)) {
+            fail_json('Neplatné nastavení.');
+        }
+    } else {
+        fail_json('Neplatné nastavení.');
+    }
+    set_setting($db, $key, $value);
         log_audit($db, 'admin_setting_updated', 'admin', $ip, ['key' => $key, 'value' => $value]);
         respond_json(['ok' => true]);
     }
@@ -333,6 +343,11 @@ $admin = is_admin();
               </span>
             </label>
             <div class="hint">Pokud je vypnuto, rezervace se uloží okamžitě bez e-mailového kódu.</div>
+            <label>
+              Max. počet dní dopředu pro rezervace
+              <input type="number" id="input-max-advance" min="0" step="1" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení. Výchozí je 30 dní.</div>
           </div>
         </section>
 

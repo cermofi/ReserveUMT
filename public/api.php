@@ -38,7 +38,8 @@ if ($action === 'list') {
 
 if ($action === 'settings') {
     $requireVerify = get_setting($db, 'require_email_verification', '1');
-    respond_json(['ok' => true, 'require_email_verification' => $requireVerify]);
+    $maxAdvance = max_advance_days($db);
+    respond_json(['ok' => true, 'require_email_verification' => $requireVerify, 'max_advance_booking_days' => $maxAdvance]);
 }
 
 require_post();

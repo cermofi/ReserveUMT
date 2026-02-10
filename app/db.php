@@ -115,6 +115,7 @@ function migrate(PDO $db): void {
     add_column_if_missing($db, 'pending_bookings', 'note', "TEXT NOT NULL DEFAULT ''");
 
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
+    $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('max_advance_booking_days', '30')")->execute();
 
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_start_end ON bookings(start_ts, end_ts)");
     $db->exec("CREATE INDEX IF NOT EXISTS idx_bookings_space ON bookings(space)");
