@@ -6,6 +6,14 @@
   let maxAdvanceDays = 30;
   let maxEmailReservations = 0;
   let maxDurationHours = 2;
+  const pluralCz = (n, forms) => {
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    if (mod100 >= 11 && mod100 <= 14) return forms.many;
+    if (mod10 === 1) return forms.one;
+    if (mod10 >= 2 && mod10 <= 4) return forms.few;
+    return forms.many;
+  };
   const updateAdvanceHint = () => {
     const el = document.getElementById('max-advance-hint');
     if (!el) return;
@@ -14,7 +22,8 @@
       el.textContent = '';
       return;
     }
-    el.textContent = `Rezervace je možné udělat ${maxAdvanceDays} dní dopředu.`;
+    const unit = pluralCz(maxAdvanceDays, { one: 'den', few: 'dny', many: 'dní' });
+    el.textContent = `Rezervace je možné udělat ${maxAdvanceDays} ${unit} dopředu.`;
     el.style.display = 'block';
   };
 
@@ -26,7 +35,8 @@
       el.textContent = '';
       return;
     }
-    el.textContent = `Maximální počet rezervací na jeden e-mail je ${maxEmailReservations}.`;
+    const unit = pluralCz(maxEmailReservations, { one: 'rezervaci', few: 'rezervace', many: 'rezervací' });
+    el.textContent = `Na jeden e-mail lze mít maximálně ${maxEmailReservations} ${unit}.`;
     el.style.display = 'block';
   };
 
@@ -38,7 +48,8 @@
       el.textContent = '';
       return;
     }
-    el.textContent = `Maximální délka rezervace je ${maxDurationHours} hodin.`;
+    const unit = pluralCz(maxDurationHours, { one: 'hodina', few: 'hodiny', many: 'hodin' });
+    el.textContent = `Maximální délka rezervace je ${maxDurationHours} ${unit}.`;
     el.style.display = 'block';
   };
   const weekStartStr = body.dataset.weekStart;
@@ -736,7 +747,24 @@
     };
 
       if (formReserve) {
-        formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
+      const enforceDurationClamp = () => {
+        if (!formReserve) return;
+        const startInput = formReserve.start;
+        const endInput = formReserve.end;
+        if (!startInput || !endInput || !startInput.value || !endInput.value) return;
+        const maxDurationMinutes = (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
+        let startMin = parseHm(startInput.value);
+        let endMin = parseHm(endInput.value);
+        if (endMin < startMin) {
+          endMin = startMin;
+        }
+        if (maxDurationMinutes > 0 && (endMin - startMin) > maxDurationMinutes) {
+          endMin = startMin + maxDurationMinutes;
+        }
+        endInput.value = minutesToTime(endMin);
+      };
+
+      formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const field = btn.dataset.timeAdjust;
           const delta = parseInt(btn.dataset.delta || '0', 10);
@@ -745,6 +773,7 @@
           const current = parseHm(input.value);
           const next = Math.max(0, Math.min(24 * 60 - stepMin, current + delta));
           input.value = minutesToTime(next);
+          enforceDurationClamp();
           const event = new Event('change', { bubbles: true });
           input.dispatchEvent(event);
         });
@@ -752,6 +781,8 @@
 
         formReserve.start.addEventListener('change', updateDurationWarning);
         formReserve.end.addEventListener('change', updateDurationWarning);
+        formReserve.start.addEventListener('change', enforceDurationClamp);
+        formReserve.end.addEventListener('change', enforceDurationClamp);
         applyMaxLimitsToForm();
       formReserve.addEventListener('submit', async (e) => {
         e.preventDefault();
