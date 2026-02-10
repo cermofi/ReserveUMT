@@ -413,33 +413,26 @@
         const titleEl = document.createElement('div');
         titleEl.className = 'booking-title';
         titleEl.textContent = displayName;
-        const spaceCompact = document.createElement('span');
-        spaceCompact.className = 'space-compact';
-        const spaceShort = b.space === 'WHOLE' ? 'UMT' : (b.space === 'HALF_A' ? 'A' : 'B');
-        spaceCompact.textContent = spaceShort;
         head.appendChild(titleEl);
-        head.appendChild(spaceCompact);
-
-        const meta = document.createElement('div');
-        meta.className = 'booking-meta chips';
-        if (b.category) {
-          const catChip = document.createElement('span');
-          catChip.className = 'chip category';
-          catChip.textContent = b.category;
-          meta.appendChild(catChip);
+        if (b.space !== 'WHOLE') {
+          const spaceCompact = document.createElement('span');
+          spaceCompact.className = 'space-compact';
+          spaceCompact.textContent = b.space === 'HALF_A' ? 'A' : 'B';
+          head.appendChild(spaceCompact);
         }
-        const spaceChip = document.createElement('span');
-        spaceChip.className = 'chip space';
-        spaceChip.textContent = b.space === 'WHOLE' ? 'CELÁ' : (b.space === 'HALF_A' ? 'A' : 'B');
-        meta.appendChild(spaceChip);
 
+        const timeEl = document.createElement('div');
+        timeEl.className = 'booking-time';
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
+        timeEl.textContent = timeLabel;
+
         const notePart = b.note ? ` — ${b.note}` : '';
-        item.title = `${displayName} — ${b.category || 'bez kategorie'} — ${spaceLabels[b.space] || b.space} — ${timeLabel}${notePart}`;
+        const spaceLabelShort = b.space === 'HALF_A' ? 'Půlka A' : (b.space === 'HALF_B' ? 'Půlka B' : '');
+        item.title = `${displayName} — ${timeLabel}${spaceLabelShort ? ` — ${spaceLabelShort}` : ''}${notePart}`;
         item.setAttribute('tabindex', '0');
 
         item.appendChild(head);
-        item.appendChild(meta);
+        item.appendChild(timeEl);
 
         // Compact mode for short height blocks
         const applyCompact = () => {
@@ -465,7 +458,8 @@
             openEditModal(b);
             return;
           }
-          showToast(`${displayName} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
+          const toastSpace = b.space === 'HALF_A' ? 'Půlka A' : (b.space === 'HALF_B' ? 'Půlka B' : '');
+          showToast(`${displayName} · ${timeLabel}${toastSpace ? ` · ${toastSpace}` : ''}`);
         });
         item.addEventListener('keydown', (ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') {

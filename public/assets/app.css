@@ -486,18 +486,25 @@ input:focus, select:focus {
 .booking {
   position: absolute;
   border-radius: 12px;
-  padding: 6px 8px;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.4);
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-size: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   min-width: 0;
   cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.booking:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .booking:focus-visible {
@@ -522,30 +529,38 @@ input:focus, select:focus {
 }
 
 .space-compact {
-  display: none;
+  display: inline-flex;
   padding: 2px 6px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.booking-time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .booking.small {
   font-size: 11px;
-  padding: 4px 6px;
+  padding: 6px 8px;
 }
 
 .booking.tiny {
   font-size: 10px;
-  padding: 3px 5px;
-}
-
-.booking.tiny .chips {
-  display: none;
+  padding: 4px 6px;
 }
 
 .booking.tiny .booking-title {
   -webkit-line-clamp: 1;
+}
+
+.booking.tiny .booking-time {
+  display: none;
 }
 
 .booking.whole {
@@ -598,6 +613,10 @@ input:focus, select:focus {
 }
 
 .booking.compact .booking-meta {
+  display: none;
+}
+
+.booking.compact .booking-time {
   display: none;
 }
 
