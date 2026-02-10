@@ -468,6 +468,14 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
             $db->exec('COMMIT');
             return $limitErr;
         }
+        if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+            $db->exec('COMMIT');
+            return $limitErr;
+        }
+        if ($limitErr = enforce_email_limit($db, (string) $pending['email'])) {
+            $db->exec('COMMIT');
+            return $limitErr;
+        }
         $space = (string) $pending['space'];
         if (has_conflict($db, $start_ts, $end_ts, $space)) {
             $db->exec('COMMIT');
