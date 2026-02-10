@@ -138,7 +138,6 @@ $weekLabel = $weekStart->format('o-\WW');
           </label>
           <div class="hint full-span" id="max-email-hint" style="display:none;"></div>
         </div>
-        <div class="hint">Půlka A = levá část, Půlka B = pravá část. Popisky lze změnit v konfiguraci.</div>
         <button class="btn primary" type="submit">
           <span class="btn-text">Odeslat žádost</span>
           <span class="spinner" aria-hidden="true"></span>
