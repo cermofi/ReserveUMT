@@ -33,13 +33,14 @@ $weekLabel = $weekStart->format('o-\WW');
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <meta name="app-version" content="<?= h(app_version()) ?>" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>UMT Rozpis</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
-<body data-page="public" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>">
+<body data-page="public" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>" data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
     <header class="topbar">
       <div class="brand">
@@ -56,9 +57,12 @@ $weekLabel = $weekStart->format('o-\WW');
       <div class="week-controls">
         <button class="btn ghost" id="week-prev">←</button>
         <button class="btn ghost" id="week-today">Tento týden</button>
+        <button class="btn ghost" id="week-date-trigger" type="button" aria-label="Vybrat datum">
+          <span aria-hidden="true">📅</span>
+        </button>
         <div id="week-label" class="week-label"></div>
         <button class="btn ghost" id="week-next">→</button>
-        <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" />
+        <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
       <div class="legend-split">
         <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>
@@ -71,6 +75,11 @@ $weekLabel = $weekStart->format('o-\WW');
       </div>
       <div id="agenda" class="agenda"></div>
     </main>
+    <footer class="content" style="padding-top:0;margin-top:-20px;">
+      <div class="app-version" data-role="app-version" aria-label="Verze aplikace" data-app-version="<?= h(app_version()) ?>">
+        <?= h(app_version()) ?>
+      </div>
+    </footer>
   </div>
 
   <div class="modal" id="modal-reserve" aria-hidden="true">
@@ -82,28 +91,31 @@ $weekLabel = $weekStart->format('o-\WW');
       <form id="form-reserve" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
         <div class="grid-2">
-          <label>
+          <label class="full-span">
             Datum
             <input type="date" name="date" required autocomplete="off" />
+            <div class="hint" id="max-advance-hint" style="display:none; margin-top:4px;"></div>
           </label>
-          <label>
-            Začátek
-            <div class="time-row">
-              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
-              <input type="time" name="start" required inputmode="numeric" />
-              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
-            </div>
-          </label>
-          <label>
-            Konec
-            <div class="time-row">
-              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
-              <input type="time" name="end" required inputmode="numeric" />
-              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
-            </div>
-          </label>
-          <div class="hint">Maximální délka veřejné rezervace je 2 hodiny.</div>
-          <div class="warning" id="duration-warning" aria-live="polite"></div>
+          <div class="grid-2 full-span">
+            <label>
+              Začátek
+              <div class="time-row">
+                <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
+                <input type="time" name="start" required inputmode="numeric" />
+                <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
+              </div>
+            </label>
+            <label>
+              Konec
+              <div class="time-row">
+                <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
+                <input type="time" name="end" required inputmode="numeric" />
+                <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
+              </div>
+            </label>
+          </div>
+          <div class="hint full-span" id="max-duration-hint" style="display:none; margin-top:-4px;"></div>
+          <div class="warning full-span" id="duration-warning" aria-live="polite"></div>
           <label>
             Prostor
             <select name="space" required>
@@ -120,14 +132,14 @@ $weekLabel = $weekStart->format('o-\WW');
             Poznámka (neveřejná)
             <textarea name="note" rows="2" maxlength="500" autocomplete="off" enterkeyhint="done"></textarea>
           </label>
+          <label id="field-email" class="full-span">
+            E-mail
+            <input type="email" name="email" required autocomplete="email" inputmode="email" enterkeyhint="done" />
+          </label>
+          <div class="hint full-span" id="max-email-hint" style="display:none;"></div>
         </div>
-        <label id="field-email">
-          E-mail
-          <input type="email" name="email" required autocomplete="email" inputmode="email" enterkeyhint="done" />
-        </label>
-        <div class="hint">Půlka A = levá část, Půlka B = pravá část. Popisky lze změnit v konfiguraci.</div>
         <button class="btn primary" type="submit">
-          <span class="btn-text">Odeslat žádost</span>
+          <span class="btn-text">Odeslat rezervaci</span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
       </form>

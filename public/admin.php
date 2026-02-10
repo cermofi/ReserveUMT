@@ -99,31 +99,53 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
         respond_json(admin_delete_occurrence($db, $ruleId, $dateTs, $ip));
     }
-    if ($action === 'list_admin') {
-        $from = (int) ($_POST['from'] ?? 0);
-        $to = (int) ($_POST['to'] ?? 0);
-        if ($from <= 0 || $to <= 0 || $to <= $from) {
-            fail_json('Invalid range');
-        }
-        $bookings = list_bookings_admin($db, $from, $to);
-        $recurring = list_recurring_occurrences($db, $from, $to);
-        $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
-        $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
-        $requireVerify = get_setting($db, 'require_email_verification', '1');
-        respond_json([
-            'ok' => true,
-            'bookings' => $bookings,
-            'recurring' => $recurring,
-            'rules' => $rules,
-            'audit' => $audit,
-            'require_email_verification' => $requireVerify,
-        ]);
+  if ($action === 'list_admin') {
+    $from = (int) ($_POST['from'] ?? 0);
+    $to = (int) ($_POST['to'] ?? 0);
+    if ($from <= 0 || $to <= 0 || $to <= $from) {
+      fail_json('Invalid range');
     }
+    $bookings = list_bookings_admin($db, $from, $to);
+    $recurring = list_recurring_occurrences($db, $from, $to);
+    $rules = $db->query('SELECT * FROM recurring_rules ORDER BY id DESC')->fetchAll();
+    $audit = $db->query('SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50')->fetchAll();
+    $requireVerify = get_setting($db, 'require_email_verification', '1');
+    $maxAdvance = max_advance_days($db);
+    $maxEmail = max_reservations_per_email($db);
+    $maxDuration = max_reservation_duration_hours($db);
+    respond_json([
+        'ok' => true,
+        'bookings' => $bookings,
+        'recurring' => $recurring,
+        'rules' => $rules,
+        'audit' => $audit,
+        'require_email_verification' => $requireVerify,
+        'max_advance_booking_days' => $maxAdvance,
+        'max_reservations_per_email' => $maxEmail,
+        'max_reservation_duration_hours' => $maxDuration,
+    ]);
+  }
 
     if ($action === 'set_setting') {
         $key = (string) ($_POST['key'] ?? '');
         $value = (string) ($_POST['value'] ?? '');
-        if ($key !== 'require_email_verification' || !in_array($value, ['0', '1'], true)) {
+        if ($key === 'require_email_verification') {
+            if (!in_array($value, ['0', '1'], true)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_advance_booking_days') {
+            if (!preg_match('/^\d+$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_reservations_per_email') {
+            if (!preg_match('/^\d+$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } elseif ($key === 'max_reservation_duration_hours') {
+            if (!preg_match('/^\\d+(\\.\\d+)?$/', $value)) {
+                fail_json('Neplatné nastavení.');
+            }
+        } else {
             fail_json('Neplatné nastavení.');
         }
         set_setting($db, $key, $value);
@@ -152,13 +174,14 @@ $admin = is_admin();
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <meta name="app-version" content="<?= h(app_version()) ?>" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>Administrace UMT</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
-<body data-page="admin" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>">
+<body data-page="admin" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>" data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
     <header class="topbar">
       <div class="brand">
@@ -332,6 +355,21 @@ $admin = is_admin();
               </span>
             </label>
             <div class="hint">Pokud je vypnuto, rezervace se uloží okamžitě bez e-mailového kódu.</div>
+            <label>
+              Max. počet dní dopředu pro rezervace
+              <input type="number" id="input-max-advance" min="0" step="1" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení. Výchozí je 30 dní.</div>
+            <label>
+              Maximální počet rezervací na jeden e-mail
+              <input type="number" id="input-max-email" min="0" step="1" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení.</div>
+            <label>
+              Maximální délka rezervace (hodiny)
+              <input type="number" id="input-max-duration" min="0" step="0.25" autocomplete="off" />
+            </label>
+            <div class="hint">0 = bez omezení.</div>
           </div>
         </section>
 
@@ -354,6 +392,11 @@ $admin = is_admin();
         </section>
       <?php endif; ?>
     </main>
+    <footer class="content" style="padding-top:0;margin-top:-20px;">
+      <div class="app-version" data-role="app-version" aria-label="Verze aplikace" data-app-version="<?= h(app_version()) ?>">
+        <?= h(app_version()) ?>
+      </div>
+    </footer>
   </div>
 
   <div class="modal" id="modal-edit" aria-hidden="true">

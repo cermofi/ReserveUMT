@@ -2,6 +2,58 @@
   const body = document.body;
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const appVersion = body.dataset.appVersion || '';
+  let maxAdvanceDays = 30;
+  let maxEmailReservations = 0;
+  let maxDurationHours = 2;
+  let requireEmailVerification = true;
+  const pluralCz = (n, forms) => {
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    if (mod100 >= 11 && mod100 <= 14) return forms.many;
+    if (mod10 === 1) return forms.one;
+    if (mod10 >= 2 && mod10 <= 4) return forms.few;
+    return forms.many;
+  };
+  const updateAdvanceHint = () => {
+    const el = document.getElementById('max-advance-hint');
+    if (!el) return;
+    if (!maxAdvanceDays || maxAdvanceDays <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    const unit = pluralCz(maxAdvanceDays, { one: 'den', few: 'dny', many: 'dní' });
+    el.textContent = `Rezervace je možné udělat ${maxAdvanceDays} ${unit} dopředu.`;
+    el.style.display = 'block';
+  };
+
+  const updateEmailHint = () => {
+    const el = document.getElementById('max-email-hint');
+    if (!el) return;
+    const requireEmail = requireEmailVerification;
+    if (!requireEmail || !maxEmailReservations || maxEmailReservations <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    const unit = pluralCz(maxEmailReservations, { one: 'rezervaci', few: 'rezervace', many: 'rezervací' });
+    el.textContent = `Na jeden e-mail lze mít maximálně ${maxEmailReservations} ${unit}.`;
+    el.style.display = 'block';
+  };
+
+  const updateDurationHint = () => {
+    const el = document.getElementById('max-duration-hint');
+    if (!el) return;
+    if (!maxDurationHours || maxDurationHours <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    const unit = pluralCz(maxDurationHours, { one: 'hodina', few: 'hodiny', many: 'hodin' });
+    el.textContent = `Maximální délka rezervace je ${maxDurationHours} ${unit}.`;
+    el.style.display = 'block';
+  };
   const weekStartStr = body.dataset.weekStart;
   const gridStart = body.dataset.gridStart || '06:00';
   const gridEnd = body.dataset.gridEnd || '23:00';
@@ -13,12 +65,22 @@
   };
 
   const toastEl = document.getElementById('toast');
-  const showToast = (msg) => {
-    if (!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    setTimeout(() => toastEl.classList.remove('show'), 3200);
-  };
+    const showToast = (msg) => {
+      if (!toastEl) return;
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 3200);
+    };
+
+    const applyMaxLimitsToForm = () => {
+      const form = document.getElementById('form-reserve');
+      if (form && form.date) {
+        setDateLimits(form.date);
+        preventDateClear(form.date);
+      }
+      const weekDate = document.getElementById('week-date');
+      if (weekDate) setDateLimits(weekDate);
+    };
 
   const parseYmd = (ymd) => {
     const [y, m, d] = ymd.split('-').map(Number);
@@ -49,6 +111,51 @@
     return h * 60 + m;
   };
 
+  const todayYmd = () => formatYmd(new Date());
+
+  const maxAllowedDate = () => {
+    if (maxAdvanceDays === 0) return null;
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + maxAdvanceDays);
+    return formatYmd(d);
+  };
+
+  const isWithinMaxLimit = (ymd) => {
+    const limit = maxAllowedDate();
+    if (!limit) return true;
+    return ymd <= limit;
+  };
+
+  const setDateLimits = (input, { setMin = false } = {}) => {
+    if (!input) return;
+    const limit = maxAllowedDate();
+    if (limit) input.max = limit; else input.removeAttribute('max');
+    if (setMin) input.min = todayYmd(); else input.removeAttribute('min');
+  };
+
+  const formResetToDefaults = (form) => {
+    if (!form) return;
+    form.reset();
+    applyMaxLimitsToForm();
+    updateAdvanceHint();
+    updateEmailHint();
+    updateDurationHint();
+  };
+
+  const preventDateClear = (input) => {
+    if (!input || input.dataset.noclear === '1') return;
+    input.dataset.noclear = '1';
+    input.dataset.prevDate = input.value || todayYmd();
+    input.addEventListener('input', () => {
+      if (input.value === '') {
+        input.value = input.dataset.prevDate || todayYmd();
+      } else {
+        input.dataset.prevDate = input.value;
+      }
+    });
+  };
+
   const weekStart = weekStartStr ? parseYmd(weekStartStr) : new Date();
   const totalMinutes = parseHm(gridEnd) - parseHm(gridStart);
 
@@ -77,13 +184,21 @@
     if (!(target instanceof HTMLElement)) return;
     const closeId = target.dataset.close;
     if (closeId) {
+      if (closeId === 'modal-reserve') {
+        formResetToDefaults(document.getElementById('form-reserve'));
+      }
       closeModal(closeId);
     }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal').forEach((m) => m.setAttribute('aria-hidden', 'true'));
+      document.querySelectorAll('.modal').forEach((m) => {
+        m.setAttribute('aria-hidden', 'true');
+        if (m.id === 'modal-reserve') {
+          formResetToDefaults(document.getElementById('form-reserve'));
+        }
+      });
     }
   });
 
@@ -148,9 +263,27 @@
       const header = document.createElement('div');
       header.className = 'day-header';
       header.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      const subHeader = document.createElement('div');
+      subHeader.className = 'day-subheader';
+      const labelA = document.createElement('span');
+      labelA.textContent = 'Půlka A';
+      const labelB = document.createElement('span');
+      labelB.className = 'right';
+      labelB.textContent = 'Půlka B';
+      subHeader.appendChild(labelA);
+      subHeader.appendChild(labelB);
       const track = document.createElement('div');
       track.className = 'day-track';
       track.style.setProperty('--total-minutes', totalMinutes);
+      const laneWrap = document.createElement('div');
+      laneWrap.className = 'lane-wrap';
+      const laneA = document.createElement('div');
+      laneA.className = 'day-lane lane-a';
+      const laneB = document.createElement('div');
+      laneB.className = 'day-lane lane-b';
+      laneWrap.appendChild(laneA);
+      laneWrap.appendChild(laneB);
+      track.appendChild(laneWrap);
       track.dataset.date = ymd;
 
       let dragActive = false;
@@ -159,7 +292,8 @@
       let selectionEl = null;
 
       const updateSelection = (clientY) => {
-        const rect = track.getBoundingClientRect();
+        const container = selectionEl?.parentElement || track;
+        const rect = container.getBoundingClientRect();
         const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
         const y1 = Math.max(0, Math.min(rect.height, dragStartY));
         const y2 = Math.max(0, Math.min(rect.height, clientY - rect.top));
@@ -183,6 +317,7 @@
       const endDrag = (clientY) => {
         if (!dragActive) return;
         dragActive = false;
+        const laneSpace = selectionEl?.dataset?.space || null;
         const result = updateSelection(clientY);
         if (selectionEl) {
           selectionEl.remove();
@@ -191,30 +326,57 @@
         selectionTooltip.style.display = 'none';
         if (page !== 'public') return;
         if (result) {
-          openReservationModal(ymd, result.start, result.end);
+          openReservationModal(ymd, result.start, result.end, laneSpace);
         }
         setTimeout(() => {
           dragMoved = false;
         }, 0);
       };
 
-      track.addEventListener('mousedown', (e) => {
-        if (page !== 'public') return;
-        if (e.button !== 0) return;
-        if (e.target && e.target.classList.contains('booking')) return;
-        e.preventDefault();
-        dragActive = true;
-        dragMoved = false;
-        dragStartY = e.clientY - track.getBoundingClientRect().top;
-        selectionEl = document.createElement('div');
-        selectionEl.className = 'selection-box';
-        track.appendChild(selectionEl);
-        updateSelection(e.clientY);
-      });
+      const attachLaneHandlers = (lane, laneSpace) => {
+        lane.addEventListener('mousedown', (e) => {
+          if (page !== 'public') return;
+          if (e.button !== 0) return;
+          if (e.target && e.target.classList.contains('booking')) return;
+          if (!isWithinMaxLimit(ymd)) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          e.preventDefault();
+          dragActive = true;
+          dragMoved = false;
+          dragStartY = e.clientY - lane.getBoundingClientRect().top;
+          selectionEl = document.createElement('div');
+          selectionEl.className = 'selection-box';
+          lane.appendChild(selectionEl);
+          updateSelection(e.clientY);
+          selectionEl.dataset.space = laneSpace;
+        });
+
+        lane.addEventListener('click', (e) => {
+          if (page !== 'public') return;
+          if (dragActive || dragMoved) return;
+          const rect = lane.getBoundingClientRect();
+          const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
+          const offset = e.clientY - rect.top;
+          const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
+          const start = startMin + minutes;
+          const end = start + stepMin;
+          if (!isWithinMaxLimit(ymd)) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          openReservationModal(ymd, start, end, laneSpace);
+        });
+      };
+
+      attachLaneHandlers(laneA, 'HALF_A');
+      attachLaneHandlers(laneB, 'HALF_B');
 
       window.addEventListener('mousemove', (e) => {
         if (!dragActive) return;
-        if (Math.abs(e.clientY - (track.getBoundingClientRect().top + dragStartY)) > 4) {
+        const rect = selectionEl?.parentElement?.getBoundingClientRect();
+        if (rect && Math.abs(e.clientY - (rect.top + dragStartY)) > 4) {
           dragMoved = true;
         }
         updateSelection(e.clientY);
@@ -223,18 +385,6 @@
       window.addEventListener('mouseup', (e) => {
         if (!dragActive) return;
         endDrag(e.clientY);
-      });
-
-      track.addEventListener('click', (e) => {
-        if (page !== 'public') return;
-        if (dragActive || dragMoved) return;
-        const rect = track.getBoundingClientRect();
-        const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
-        const offset = e.clientY - rect.top;
-        const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
-        const start = startMin + minutes;
-        const end = start + stepMin;
-        openReservationModal(ymd, start, end);
       });
 
       all.filter(b => {
@@ -263,33 +413,21 @@
         const titleEl = document.createElement('div');
         titleEl.className = 'booking-title';
         titleEl.textContent = displayName;
-        const spaceCompact = document.createElement('span');
-        spaceCompact.className = 'space-compact';
-        const spaceShort = b.space === 'WHOLE' ? 'UMT' : (b.space === 'HALF_A' ? 'A' : 'B');
-        spaceCompact.textContent = spaceShort;
         head.appendChild(titleEl);
-        head.appendChild(spaceCompact);
 
-        const meta = document.createElement('div');
-        meta.className = 'booking-meta chips';
-        if (b.category) {
-          const catChip = document.createElement('span');
-          catChip.className = 'chip category';
-          catChip.textContent = b.category;
-          meta.appendChild(catChip);
-        }
-        const spaceChip = document.createElement('span');
-        spaceChip.className = 'chip space';
-        spaceChip.textContent = b.space === 'WHOLE' ? 'CELÁ' : (b.space === 'HALF_A' ? 'A' : 'B');
-        meta.appendChild(spaceChip);
-
+        const timeEl = document.createElement('div');
+        timeEl.className = 'booking-time';
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
+        const timeShort = formatTime(startDate);
+        const isHalf = b.space === 'HALF_A' || b.space === 'HALF_B';
+        timeEl.textContent = isHalf ? timeShort : timeLabel;
+
         const notePart = b.note ? ` — ${b.note}` : '';
-        item.title = `${displayName} — ${b.category || 'bez kategorie'} — ${spaceLabels[b.space] || b.space} — ${timeLabel}${notePart}`;
+        item.title = `${displayName} — ${timeLabel}${notePart}`;
         item.setAttribute('tabindex', '0');
 
         item.appendChild(head);
-        item.appendChild(meta);
+        item.appendChild(timeEl);
 
         // Compact mode for short height blocks
         const applyCompact = () => {
@@ -315,7 +453,7 @@
             openEditModal(b);
             return;
           }
-          showToast(`${displayName} · ${b.category} · ${spaceLabels[b.space] || b.space}`);
+          showToast(`${displayName} · ${timeLabel}`);
         });
         item.addEventListener('keydown', (ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') {
@@ -323,10 +461,17 @@
             item.click();
           }
         });
-        track.appendChild(item);
+        if (b.space === 'HALF_A') {
+          laneA.appendChild(item);
+        } else if (b.space === 'HALF_B') {
+          laneB.appendChild(item);
+        } else {
+          track.appendChild(item);
+        }
       });
 
       col.appendChild(header);
+      col.appendChild(subHeader);
       col.appendChild(track);
       dayCols.appendChild(col);
     }
@@ -393,6 +538,23 @@
       if (toggle) {
         toggle.checked = String(res.require_email_verification || '1') === '1';
       }
+      if (typeof res.max_advance_booking_days === 'number') {
+        maxAdvanceDays = res.max_advance_booking_days;
+        const inputMax = document.getElementById('input-max-advance');
+        if (inputMax) inputMax.value = String(maxAdvanceDays);
+        const formAdminBook = document.getElementById('form-admin-book');
+        if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+      }
+      if (typeof res.max_reservations_per_email === 'number') {
+        maxEmailReservations = res.max_reservations_per_email;
+        const inputMaxEmail = document.getElementById('input-max-email');
+        if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
+      }
+      if (typeof res.max_reservation_duration_hours === 'number') {
+        maxDurationHours = res.max_reservation_duration_hours;
+        const inputMaxDur = document.getElementById('input-max-duration');
+        if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
+      }
       return;
     }
     const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
@@ -405,6 +567,7 @@
     const next = document.getElementById('week-next');
     const today = document.getElementById('week-today');
     const dateInput = document.getElementById('week-date');
+    const dateTrigger = document.getElementById('week-date-trigger');
 
     const syncDateInput = () => {
       if (!dateInput) return;
@@ -420,6 +583,13 @@
       const diff = (day === 0 ? -6 : 1 - day);
       monday.setDate(monday.getDate() + diff);
       monday.setHours(0, 0, 0, 0);
+      const targetYmd = formatYmd(monday);
+      const limit = maxAllowedDate();
+      if (limit && targetYmd > limit) {
+        showToast('Nelze zobrazit týden tak daleko dopředu.');
+        syncDateInput();
+        return;
+      }
       weekStart.setTime(monday.getTime());
       loadWeek();
       syncDateInput();
@@ -445,18 +615,62 @@
     });
     if (next) next.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() + 7);
+      const limit = maxAllowedDate();
+      const targetYmd = formatYmd(weekStart);
+      if (limit && targetYmd > limit) {
+        weekStart.setDate(weekStart.getDate() - 7);
+        showToast('Nelze zobrazit týden tak daleko dopředu.');
+        return;
+      }
       loadWeek();
       syncDateInput();
     });
     if (dateInput) {
       dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
+      const limit = maxAllowedDate();
+      if (limit) {
+        dateInput.max = limit;
+      } else {
+        dateInput.removeAttribute('max');
+      }
+    }
+    if (dateTrigger && dateInput) {
+      const openPicker = () => {
+        if (typeof dateInput.showPicker === 'function') {
+          try {
+            dateInput.showPicker();
+            return;
+          } catch (_) {
+            // fall through to focus+click
+          }
+        }
+        dateInput.focus({ preventScroll: true });
+        dateInput.click();
+      };
+      dateTrigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        openPicker();
+      });
+      dateTrigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPicker();
+        }
+      });
     }
   };
 
-  const openReservationModal = (dateStr, startMin, endMin) => {
+  const openReservationModal = (dateStr, startMin, endMin, spaceChoice = null) => {
     const form = document.getElementById('form-reserve');
     if (!form) return;
+    const limit = maxAllowedDate();
+    if (limit && dateStr > limit) {
+      showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+      return;
+    }
+    formResetToDefaults(form);
     form.date.value = dateStr;
+    form.date.dataset.prevDate = form.date.value;
     const baseDate = parseYmd(dateStr);
     const start = new Date(baseDate);
     start.setHours(0, 0, 0, 0);
@@ -466,12 +680,17 @@
     end.setMinutes(endMin);
     form.start.value = formatTime(start);
     form.end.value = formatTime(end);
+    if (spaceChoice && form.space) {
+      form.space.value = spaceChoice;
+    }
+    if (limit) form.date.max = limit; else form.date.removeAttribute('max');
     openModal('modal-reserve');
   };
 
   const openEditModal = (booking) => {
     const form = document.getElementById('form-edit');
     if (!form) return;
+    form.reset();
     const start = new Date(booking.start_ts * 1000);
     const end = new Date(booking.end_ts * 1000);
     form.id.value = booking.id;
@@ -483,6 +702,7 @@
     form.category.value = booking.category || 'Jiné';
     form.space.value = booking.space || 'WHOLE';
     if (form.note) form.note.value = booking.note || '';
+    if (form.date) setDateLimits(form.date, { setMin: false });
     openModal('modal-edit');
   };
 
@@ -493,17 +713,30 @@
     return el;
   })();
 
-  const initPublicForms = () => {
-    const btnNew = document.getElementById('btn-new');
+    const initPublicForms = () => {
+      const btnNew = document.getElementById('btn-new');
     const emailField = document.getElementById('field-email');
     const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
     const durationWarning = document.getElementById('duration-warning');
+    applyMaxLimitsToForm();
+    updateAdvanceHint();
+    updateEmailHint();
+    updateDurationHint();
     if (btnNew) {
-      btnNew.addEventListener('click', () => openReservationModal(formatYmd(weekStart), parseHm(gridStart), parseHm(gridStart) + stepMin));
-    }
+      btnNew.addEventListener('click', () => {
+        const today = new Date();
+        const todayYmd = formatYmd(today);
+        const limit = maxAllowedDate();
+          if (limit && todayYmd > limit) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          openReservationModal(todayYmd, parseHm(gridStart), parseHm(gridStart) + stepMin);
+        });
+      }
 
-    const formReserve = document.getElementById('form-reserve');
-    const formVerify = document.getElementById('form-verify');
+      const formReserve = document.getElementById('form-reserve');
+      const formVerify = document.getElementById('form-verify');
     let verifyTimer = null;
 
     const applyVerifySetting = (requireVerify) => {
@@ -519,12 +752,32 @@
     };
 
     fetchJson('/api.php?action=settings')
-      .then((res) => applyVerifySetting(String(res.require_email_verification || '1') === '1'))
+      .then((res) => {
+        const requireVerify = String(res.require_email_verification || '1') === '1';
+        applyVerifySetting(requireVerify);
+        requireEmailVerification = requireVerify;
+        if (typeof res.max_advance_booking_days === 'number') {
+          maxAdvanceDays = res.max_advance_booking_days;
+        }
+        if (typeof res.max_reservations_per_email === 'number') {
+          maxEmailReservations = res.max_reservations_per_email;
+        }
+        if (typeof res.max_reservation_duration_hours === 'number') {
+          maxDurationHours = res.max_reservation_duration_hours;
+        }
+        applyMaxLimitsToForm();
+        updateAdvanceHint();
+        updateEmailHint();
+        updateDurationHint();
+      })
       .catch(() => {
         applyVerifySetting(true);
+        requireEmailVerification = true;
+        updateEmailHint();
       });
 
-    const maxDurationMinutes = 120;
+    const getMaxDurationMinutes = () => (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
+
     const updateDurationWarning = () => {
       if (!formReserve || !durationWarning) return;
       const start = formReserve.start.value;
@@ -534,9 +787,10 @@
         durationWarning.textContent = '';
         return;
       }
+      const maxDurationMinutes = getMaxDurationMinutes();
       const duration = parseHm(end) - parseHm(start);
-      if (duration > maxDurationMinutes) {
-        durationWarning.textContent = 'Délka rezervace přesahuje 2 hodiny.';
+      if (maxDurationMinutes > 0 && duration > maxDurationMinutes) {
+        durationWarning.textContent = `Délka rezervace přesahuje ${maxDurationHours} hodin.`;
         durationWarning.classList.add('show');
       } else {
         durationWarning.classList.remove('show');
@@ -544,7 +798,24 @@
       }
     };
 
-    if (formReserve) {
+      if (formReserve) {
+      const enforceDurationClamp = () => {
+        if (!formReserve) return;
+        const startInput = formReserve.start;
+        const endInput = formReserve.end;
+        if (!startInput || !endInput || !startInput.value || !endInput.value) return;
+        const maxDurationMinutes = getMaxDurationMinutes();
+        let startMin = parseHm(startInput.value);
+        let endMin = parseHm(endInput.value);
+        if (endMin < startMin) {
+          endMin = startMin;
+        }
+        if (maxDurationMinutes > 0 && (endMin - startMin) > maxDurationMinutes) {
+          endMin = startMin + maxDurationMinutes;
+        }
+        endInput.value = minutesToTime(endMin);
+      };
+
       formReserve.querySelectorAll('[data-time-adjust]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const field = btn.dataset.timeAdjust;
@@ -554,19 +825,24 @@
           const current = parseHm(input.value);
           const next = Math.max(0, Math.min(24 * 60 - stepMin, current + delta));
           input.value = minutesToTime(next);
+          enforceDurationClamp();
           const event = new Event('change', { bubbles: true });
           input.dispatchEvent(event);
         });
       });
 
-      formReserve.start.addEventListener('change', updateDurationWarning);
-      formReserve.end.addEventListener('change', updateDurationWarning);
+        formReserve.start.addEventListener('change', updateDurationWarning);
+        formReserve.end.addEventListener('change', updateDurationWarning);
+        formReserve.start.addEventListener('change', enforceDurationClamp);
+        formReserve.end.addEventListener('change', enforceDurationClamp);
+        applyMaxLimitsToForm();
       formReserve.addEventListener('submit', async (e) => {
         e.preventDefault();
         const duration = parseHm(formReserve.end.value || '00:00') - parseHm(formReserve.start.value || '00:00');
-        if (duration > maxDurationMinutes) {
+        const maxDurationMinutes = getMaxDurationMinutes();
+        if (maxDurationMinutes > 0 && duration > maxDurationMinutes) {
           updateDurationWarning();
-          showToast('Maximální délka rezervace je 2 hodiny.');
+          showToast('Délka rezervace přesahuje povolený limit.');
           return;
         }
         const btn = formReserve.querySelector('button[type="submit"]');
@@ -581,6 +857,7 @@
           closeModal('modal-reserve');
           if (res.booking_id) {
             showToast('Rezervace byla uložena.');
+            formResetToDefaults(formReserve);
             await loadWeek();
             return;
           }
@@ -787,12 +1064,20 @@
 
     const formAdminBook = document.getElementById('form-admin-book');
     if (formAdminBook) {
+      setDateLimits(formAdminBook.date, { setMin: true });
       formAdminBook.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = formAdminBook.querySelector('button[type="submit"]');
         setLoading(btn, true);
         try {
           const data = new URLSearchParams(new FormData(formAdminBook));
+          const dateVal = formAdminBook.date?.value || '';
+          const limit = maxAllowedDate();
+          if (limit && dateVal > limit) {
+            showToast('Rezervaci nelze vytvořit tak daleko dopředu.');
+            setLoading(btn, false);
+            return;
+          }
           await fetchJson('/admin.php', { method: 'POST', body: data });
           showToast('Rezervace vytvořena.');
           formAdminBook.reset();
@@ -842,6 +1127,81 @@
       });
     }
 
+    const inputMax = document.getElementById('input-max-advance');
+    if (inputMax) {
+      inputMax.addEventListener('change', async () => {
+        const val = inputMax.value.trim();
+        if (!/^\d+$/.test(val)) {
+          showToast('Zadejte celé číslo.');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_advance_booking_days',
+            value: val
+          });
+          maxAdvanceDays = parseInt(val, 10);
+          const formAdminBook = document.getElementById('form-admin-book');
+          if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
+    const inputMaxEmail = document.getElementById('input-max-email');
+    if (inputMaxEmail) {
+      inputMaxEmail.addEventListener('change', async () => {
+        const val = inputMaxEmail.value.trim();
+        if (!/^\d+$/.test(val)) {
+          showToast('Zadejte celé číslo.');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_reservations_per_email',
+            value: val
+          });
+          maxEmailReservations = parseInt(val, 10);
+          updateEmailHint();
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
+    const inputMaxDuration = document.getElementById('input-max-duration');
+    if (inputMaxDuration) {
+      inputMaxDuration.addEventListener('change', async () => {
+        const val = inputMaxDuration.value.trim();
+        if (!/^\d+(\.\d+)?$/.test(val)) {
+          showToast('Zadejte číslo (hodiny).');
+          return;
+        }
+        const num = parseFloat(val);
+        if (!Number.isFinite(num) || num < 0) {
+          showToast('Zadejte číslo (hodiny).');
+          return;
+        }
+        try {
+          await adminPost({
+            action: 'set_setting',
+            key: 'max_reservation_duration_hours',
+            value: String(num)
+          });
+          maxDurationHours = num;
+          updateDurationHint();
+          showToast('Nastavení uloženo.');
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    }
+
     const clearRate = document.getElementById('btn-clear-rate');
     if (clearRate) {
       clearRate.addEventListener('click', async () => {
@@ -863,6 +1223,13 @@
         setLoading(btn, true);
         try {
           const data = new URLSearchParams(new FormData(formEdit));
+          const dateVal = formEdit.date?.value || '';
+          const limit = maxAllowedDate();
+          if (limit && dateVal > limit) {
+            showToast('Rezervaci nelze upravit tak daleko dopředu.');
+            setLoading(btn, false);
+            return;
+          }
           await fetchJson('/admin.php', { method: 'POST', body: data });
           showToast('Rezervace upravena.');
           closeModal('modal-edit');
@@ -899,5 +1266,17 @@
     initAdminForms();
   }
   loadWeek();
-})();
 
+  // Copy version to clipboard on click (nice-to-have, silent fail)
+  if (appVersion) {
+    const el = document.querySelector('[data-role="app-version"]');
+    if (el) {
+      el.addEventListener('click', () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(appVersion).catch(() => {});
+        }
+      });
+      el.title = 'Kliknutím zkopírujete verzi';
+    }
+  }
+})();

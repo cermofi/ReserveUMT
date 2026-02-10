@@ -43,6 +43,18 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html {
   font-size: 16px;
 }
@@ -222,6 +234,10 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.full-span {
+  grid-column: 1 / -1;
+}
+
 .form {
   display: grid;
   gap: 12px;
@@ -386,7 +402,7 @@ input:focus, select:focus {
 
 .day-col {
   display: grid;
-  grid-template-rows: 40px 1fr;
+  grid-template-rows: 40px auto 1fr;
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -404,6 +420,18 @@ input:focus, select:focus {
   z-index: 2;
 }
 
+.day-subheader {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 10px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.day-subheader .right {
+  text-align: right;
+}
+
 .day-track {
   position: relative;
   height: calc(var(--total-minutes) * var(--px-per-min));
@@ -413,6 +441,21 @@ input:focus, select:focus {
   background-size: 100% calc(var(--px-per-min) * 30), 100% 100%;
   box-shadow: inset 0 -1px 0 var(--border);
   overflow: hidden;
+}
+
+.lane-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.day-lane {
+  position: relative;
+  flex: 1;
+}
+
+.day-lane + .day-lane {
+  border-left: 1px solid var(--border);
 }
 
 .selection-box {
@@ -443,18 +486,25 @@ input:focus, select:focus {
 .booking {
   position: absolute;
   border-radius: 12px;
-  padding: 6px 8px;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.4);
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--text);
   font-size: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   min-width: 0;
   cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.booking:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .booking:focus-visible {
@@ -479,30 +529,38 @@ input:focus, select:focus {
 }
 
 .space-compact {
-  display: none;
+  display: inline-flex;
   padding: 2px 6px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(37, 99, 235, 0.15);
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.booking-time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .booking.small {
   font-size: 11px;
-  padding: 4px 6px;
+  padding: 6px 8px;
 }
 
 .booking.tiny {
   font-size: 10px;
-  padding: 3px 5px;
-}
-
-.booking.tiny .chips {
-  display: none;
+  padding: 4px 6px;
 }
 
 .booking.tiny .booking-title {
   -webkit-line-clamp: 1;
+}
+
+.booking.tiny .booking-time {
+  display: none;
 }
 
 .booking.whole {
@@ -558,6 +616,10 @@ input:focus, select:focus {
   display: none;
 }
 
+.booking.compact .booking-time {
+  display: none;
+}
+
 .booking.compact .space-compact {
   display: inline-flex;
   align-items: center;
@@ -584,6 +646,15 @@ input:focus, select:focus {
 .booking.space-b,
 .booking.space-whole {
   border-width: 1px;
+}
+
+.day-lane .booking.space-a,
+.day-lane .booking.space-b {
+  left: 6px;
+  right: 6px;
+  width: auto;
+  padding: 7px 8px;
+  font-size: 11.5px;
 }
 
 .legend-split {
@@ -673,6 +744,21 @@ button.loading .spinner {
 .toast.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+.app-version {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-version:hover {
+  opacity: 1;
 }
 
 .table {

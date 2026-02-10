@@ -21,6 +21,64 @@ function get_setting(PDO $db, string $key, string $default): string {
     return (string) $row['value'];
 }
 
+function max_advance_days(PDO $db): int {
+    $days = (int) get_setting($db, 'max_advance_booking_days', '30');
+    if ($days < 0) {
+        return 0;
+    }
+    return $days;
+}
+
+function max_reservations_per_email(PDO $db): int {
+    $val = (int) get_setting($db, 'max_reservations_per_email', '0');
+    return $val < 0 ? 0 : $val;
+}
+
+function max_reservation_duration_hours(PDO $db): float {
+    $val = (float) get_setting($db, 'max_reservation_duration_hours', '2');
+    if ($val < 0) return 0.0;
+    return $val;
+}
+
+function enforce_advance_limit(PDO $db, int $start_ts, int $end_ts): ?array {
+    $limitDays = max_advance_days($db);
+    if ($limitDays === 0) {
+        return null; // 0 => no limit
+    }
+    $now = time();
+    $maxTs = $now + ($limitDays * 86400);
+    if ($start_ts > $maxTs || $end_ts > $maxTs) {
+        return ['ok' => false, 'error' => "Rezervace lze vytvořit maximálně {$limitDays} dní dopředu."];
+    }
+    return null;
+}
+
+function enforce_duration_limit(PDO $db, int $start_ts, int $end_ts): ?array {
+    $hours = max_reservation_duration_hours($db);
+    if ($hours <= 0) return null;
+    $durationHours = ($end_ts - $start_ts) / 3600;
+    if ($durationHours > $hours + 1e-6) {
+        return ['ok' => false, 'error' => "Maximální délka rezervace je {$hours} hodin."];
+    }
+    return null;
+}
+
+function enforce_email_limit(PDO $db, string $email): ?array {
+    $limit = max_reservations_per_email($db);
+    $requireEmail = get_setting($db, 'require_email_verification', '1') === '1';
+    if (!$requireEmail) return null;
+    if ($limit === 0) return null;
+    if ($email === '') return null; // no email -> cannot count
+    $now = time();
+    $stmt = $db->prepare("SELECT COUNT(*) AS cnt FROM bookings WHERE email = ? AND end_ts > ? AND (status IS NULL OR status != 'CANCELLED')");
+    $stmt->execute([$email, $now]);
+    $cnt = (int) ($stmt->fetch()['cnt'] ?? 0);
+    if ($cnt >= $limit) {
+        return ['ok' => false, 'error' => "Na tento e-mail je možné mít maximálně {$limit} rezervací."];
+    }
+    return null;
+}
+
 function set_setting(PDO $db, string $key, string $value): void {
     $stmt = $db->prepare('INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
     $stmt->execute([$key, $value]);
@@ -301,11 +359,23 @@ function create_pending_booking(PDO $db, array $data, string $ip): array {
     }
     $start_ts = $dtStart->getTimestamp();
     $end_ts = $dtEnd->getTimestamp();
+    if ($limitErr = enforce_advance_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_advance_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
     if ($end_ts <= $start_ts) {
         return ['ok' => false, 'error' => 'Konec musí být po začátku.'];
     }
-    if (($end_ts - $start_ts) > 7200) {
-        return ['ok' => false, 'error' => 'Maximální délka rezervace je 2 hodiny.'];
+    if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_email_limit($db, $email)) {
+        return $limitErr;
     }
 
     if (!rate_limit($db, 'req_ip:' . $ip, 5, 3600)) {
@@ -396,6 +466,18 @@ function verify_pending_booking(PDO $db, int $pendingId, string $code, string $i
 
         $start_ts = (int) $pending['start_ts'];
         $end_ts = (int) $pending['end_ts'];
+        if ($limitErr = enforce_advance_limit($db, $start_ts, $end_ts)) {
+            $db->exec('COMMIT');
+            return $limitErr;
+        }
+        if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+            $db->exec('COMMIT');
+            return $limitErr;
+        }
+        if ($limitErr = enforce_email_limit($db, (string) $pending['email'])) {
+            $db->exec('COMMIT');
+            return $limitErr;
+        }
         $space = (string) $pending['space'];
         if (has_conflict($db, $start_ts, $end_ts, $space)) {
             $db->exec('COMMIT');
@@ -663,8 +745,23 @@ function public_update_booking(PDO $db, string $token, array $data, string $ip):
     if ($end_ts <= $start_ts) {
         return ['ok' => false, 'error' => 'Konec musí být po začátku.'];
     }
-    if (($end_ts - $start_ts) > 7200) {
-        return ['ok' => false, 'error' => 'Maximální délka rezervace je 2 hodiny.'];
+    if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_email_limit($db, $email)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_duration_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_email_limit($db, $email)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_advance_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
+    }
+    if ($limitErr = enforce_advance_limit($db, $start_ts, $end_ts)) {
+        return $limitErr;
     }
 
     $id = (int) $booking['id'];
