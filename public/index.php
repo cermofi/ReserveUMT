@@ -69,6 +69,23 @@ $weekLabel = $weekStart->format('o-\WW');
         <span>Půlka B = půlka dál od vchodu</span>
       </div>
 
+      <div id="mobile-calendar" class="mobile-calendar">
+        <div id="mobile-weekstrip" class="mobile-weekstrip"></div>
+        <div class="mobile-day-header">
+          <button class="btn ghost" type="button" id="mobile-day-prev" aria-label="Předchozí den">←</button>
+          <div class="mobile-day-label" id="mobile-day-label"></div>
+          <button class="btn ghost" type="button" id="mobile-day-next" aria-label="Další den">→</button>
+        </div>
+        <div class="mobile-space-toggle" id="mobile-space-toggle">
+          <button type="button" data-space="HALF_A" class="active">A</button>
+          <button type="button" data-space="HALF_B">B</button>
+          <button type="button" data-space="WHOLE">Celá</button>
+        </div>
+        <div class="mobile-day-wrap">
+          <div id="mobile-timeline" class="mobile-timeline"></div>
+        </div>
+      </div>
+
       <div class="calendar-wrap">
         <div id="calendar" class="calendar"></div>
       </div>

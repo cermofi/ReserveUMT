@@ -802,6 +802,148 @@ button.loading .spinner {
   gap: 12px;
 }
 
+.mobile-calendar {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .calendar {
+    display: none;
+  }
+  .agenda {
+    display: none;
+  }
+  .mobile-calendar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .mobile-weekstrip {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .mobile-weekstrip button {
+    padding: 8px 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 12px;
+  }
+  .mobile-weekstrip button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .mobile-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .mobile-day-label {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .mobile-space-toggle {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .mobile-space-toggle button {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    padding: 8px 6px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .mobile-space-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .mobile-day-wrap {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .mobile-timeline {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 8px;
+    padding: 8px;
+    --px-per-min-mobile: 1.15px;
+  }
+  .mobile-time-col {
+    position: relative;
+  }
+  .mobile-time-labels {
+    position: relative;
+    height: calc(var(--total-minutes) * var(--px-per-min-mobile));
+    border-right: 1px solid var(--border);
+  }
+  .mobile-time-label {
+    position: absolute;
+    left: 0;
+    font-size: 11px;
+    color: var(--muted);
+    transform: translateY(-6px);
+  }
+  .mobile-day-track {
+    position: relative;
+    height: calc(var(--total-minutes) * var(--px-per-min-mobile));
+    background-image:
+      linear-gradient(to bottom, rgba(100, 116, 139, 0.1) 1px, transparent 1px),
+      linear-gradient(to right, transparent calc(50% - 1px), rgba(100, 116, 139, 0.2) 50%, transparent calc(50% + 1px));
+    background-size: 100% calc(var(--px-per-min-mobile) * 30), 100% 100%;
+    box-shadow: inset 0 -1px 0 var(--border);
+    overflow: hidden;
+    border-radius: 10px;
+  }
+  .mobile-lane-wrap {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mobile-lane {
+    position: relative;
+  }
+  .mobile-lane + .mobile-lane {
+    border-left: 1px solid var(--border);
+  }
+  .m-booking {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 11px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--text);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .m-booking.whole {
+    left: 4px;
+    right: 4px;
+  }
+  .m-booking-title {
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .m-booking-time {
+    font-size: 10px;
+    color: var(--muted);
+  }
+}
 .agenda-item {
   padding: 12px;
   border-radius: 12px;
