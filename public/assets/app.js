@@ -4,6 +4,17 @@
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
   let maxAdvanceDays = 30;
+  const updateAdvanceHint = () => {
+    const el = document.getElementById('max-advance-hint');
+    if (!el) return;
+    if (!maxAdvanceDays || maxAdvanceDays <= 0) {
+      el.style.display = 'none';
+      el.textContent = '';
+      return;
+    }
+    el.textContent = `Rezervace je možné udělat ${maxAdvanceDays} dní dopředu.`;
+    el.style.display = 'block';
+  };
   const weekStartStr = body.dataset.weekStart;
   const gridStart = body.dataset.gridStart || '06:00';
   const gridEnd = body.dataset.gridEnd || '23:00';
@@ -595,11 +606,12 @@
   })();
 
     const initPublicForms = () => {
-    const btnNew = document.getElementById('btn-new');
+      const btnNew = document.getElementById('btn-new');
     const emailField = document.getElementById('field-email');
     const emailInput = emailField ? emailField.querySelector('input[name="email"]') : null;
     const durationWarning = document.getElementById('duration-warning');
     applyMaxLimitsToForm();
+    updateAdvanceHint();
     if (btnNew) {
       btnNew.addEventListener('click', () => {
         const today = new Date();
@@ -636,6 +648,7 @@
           maxAdvanceDays = res.max_advance_booking_days;
         }
         applyMaxLimitsToForm();
+        updateAdvanceHint();
       })
       .catch(() => {
         applyVerifySetting(true);

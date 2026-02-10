@@ -95,6 +95,7 @@ $weekLabel = $weekStart->format('o-\WW');
             Datum
             <input type="date" name="date" required autocomplete="off" />
           </label>
+          <div class="hint" id="max-advance-hint" style="display:none;"></div>
           <label>
             Začátek
             <div class="time-row">
