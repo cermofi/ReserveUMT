@@ -6,6 +6,7 @@
   let maxAdvanceDays = 30;
   let maxEmailReservations = 0;
   let maxDurationHours = 2;
+  let requireEmailVerification = true;
   const pluralCz = (n, forms) => {
     const mod100 = n % 100;
     const mod10 = n % 10;
@@ -764,6 +765,8 @@
       })
       .catch(() => {
         applyVerifySetting(true);
+        requireEmailVerification = true;
+        updateEmailHint();
       });
 
     const updateDurationWarning = () => {
