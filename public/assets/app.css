@@ -11,6 +11,7 @@
   --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   --radius: 16px;
   --px-per-min: 1.2px;
+  --grid-top: 60px;
   --cat-0: #0ea5e9;
   --cat-1: #22c55e;
   --cat-2: #f97316;
@@ -373,11 +374,11 @@ input:focus, select:focus {
 
 .time-col {
   display: grid;
-  grid-template-rows: 40px 1fr;
+  grid-template-rows: var(--grid-top) 1fr;
 }
 
 .time-header {
-  height: 40px;
+  height: var(--grid-top);
 }
 
 .time-labels {

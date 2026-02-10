@@ -534,6 +534,26 @@
 
     calendar.appendChild(timeCol);
     calendar.appendChild(dayCols);
+
+    const updateGridTopVar = () => {
+      const firstCol = dayCols.querySelector('.day-col');
+      if (!firstCol) return;
+      const headerH = firstCol.querySelector('.day-header')?.getBoundingClientRect().height || 0;
+      const subH = firstCol.querySelector('.day-subheader')?.getBoundingClientRect().height || 0;
+      const gridTop = headerH + subH;
+      if (gridTop > 0) {
+        calendar.style.setProperty('--grid-top', `${gridTop}px`);
+      }
+    };
+
+    if (window.__umtGridTopHandler) {
+      window.removeEventListener('resize', window.__umtGridTopHandler);
+    }
+    window.__umtGridTopHandler = () => {
+      window.requestAnimationFrame(updateGridTopVar);
+    };
+    window.addEventListener('resize', window.__umtGridTopHandler);
+    updateGridTopVar();
   };
 
   const renderAgenda = (bookings, recurring) => {
