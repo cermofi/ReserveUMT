@@ -414,21 +414,16 @@
         titleEl.className = 'booking-title';
         titleEl.textContent = displayName;
         head.appendChild(titleEl);
-        if (b.space !== 'WHOLE') {
-          const spaceCompact = document.createElement('span');
-          spaceCompact.className = 'space-compact';
-          spaceCompact.textContent = b.space === 'HALF_A' ? 'A' : 'B';
-          head.appendChild(spaceCompact);
-        }
 
         const timeEl = document.createElement('div');
         timeEl.className = 'booking-time';
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
-        timeEl.textContent = timeLabel;
+        const timeShort = formatTime(startDate);
+        const isHalf = b.space === 'HALF_A' || b.space === 'HALF_B';
+        timeEl.textContent = isHalf ? timeShort : timeLabel;
 
         const notePart = b.note ? ` — ${b.note}` : '';
-        const spaceLabelShort = b.space === 'HALF_A' ? 'Půlka A' : (b.space === 'HALF_B' ? 'Půlka B' : '');
-        item.title = `${displayName} — ${timeLabel}${spaceLabelShort ? ` — ${spaceLabelShort}` : ''}${notePart}`;
+        item.title = `${displayName} — ${timeLabel}${notePart}`;
         item.setAttribute('tabindex', '0');
 
         item.appendChild(head);
@@ -458,8 +453,7 @@
             openEditModal(b);
             return;
           }
-          const toastSpace = b.space === 'HALF_A' ? 'Půlka A' : (b.space === 'HALF_B' ? 'Půlka B' : '');
-          showToast(`${displayName} · ${timeLabel}${toastSpace ? ` · ${toastSpace}` : ''}`);
+          showToast(`${displayName} · ${timeLabel}`);
         });
         item.addEventListener('keydown', (ev) => {
           if (ev.key === 'Enter' || ev.key === ' ') {

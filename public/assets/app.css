@@ -653,6 +653,8 @@ input:focus, select:focus {
   left: 6px;
   right: 6px;
   width: auto;
+  padding: 7px 8px;
+  font-size: 11.5px;
 }
 
 .legend-split {
