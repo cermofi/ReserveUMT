@@ -63,7 +63,7 @@
     HALF_A: body.dataset.spaceLabelA || 'Půlka A',
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
-  const mobileMq = window.matchMedia('(max-width: 899px)');
+  const mobileMq = window.matchMedia('(max-width: 820px)');
   let mobileDayIndex = 0;
   let mobileSelectedSpace = 'HALF_A';
   let mobileBookings = [];
@@ -558,6 +558,7 @@
 
   const renderMobileWeekstrip = () => {
     if (page !== 'public') return;
+    if (mobileView !== 'day') return;
     const strip = document.getElementById('mobile-weekstrip');
     if (!strip) return;
     strip.innerHTML = '';
@@ -580,6 +581,13 @@
     const label = document.getElementById('mobile-day-label');
     if (!wrapper || !timeline || !label) return;
     if (!mobileMq.matches) return;
+    if (mobileView !== 'day') {
+      const dayWrap = wrapper.querySelector('.mobile-day-wrap');
+      if (dayWrap) dayWrap.setAttribute('hidden', 'true');
+      return;
+    }
+    const dayWrap = wrapper.querySelector('.mobile-day-wrap');
+    if (dayWrap) dayWrap.removeAttribute('hidden');
 
     const selectedDate = new Date(weekStart);
     selectedDate.setDate(weekStart.getDate() + mobileDayIndex);
@@ -689,6 +697,99 @@
     timeline.appendChild(dayCol);
   };
 
+  const renderMobileWeekGrid = () => {
+    if (page !== 'public') return;
+    const wrapOuter = document.getElementById('m-week-grid');
+    if (!wrapOuter || !mobileMq.matches) return;
+    if (mobileView !== 'week') {
+      wrapOuter.innerHTML = '';
+      wrapOuter.setAttribute('hidden', 'true');
+      return;
+    }
+    wrapOuter.removeAttribute('hidden');
+    wrapOuter.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'm-week-grid';
+    wrapOuter.appendChild(wrap);
+
+    const startMin = parseHm(gridStart);
+    const endMin = parseHm(gridEnd);
+    const totalMinutes = endMin - startMin;
+    wrap.style.setProperty('--total-minutes', totalMinutes);
+
+    const timeCol = document.createElement('div');
+    timeCol.className = 'm-week-time';
+    const labels = document.createElement('div');
+    labels.className = 'm-week-time-labels';
+    labels.style.setProperty('--total-minutes', totalMinutes);
+    for (let m = startMin; m <= endMin; m += 60) {
+      const l = document.createElement('div');
+      l.className = 'm-week-time-label';
+      const h = String(Math.floor(m / 60)).padStart(2, '0');
+      l.textContent = `${h}:00`;
+      l.style.top = `calc(${m - startMin} * var(--px-per-min-mobile))`;
+      labels.appendChild(l);
+    }
+    timeCol.appendChild(labels);
+    wrap.appendChild(timeCol);
+
+    const all = [...mobileBookings, ...mobileRecurring];
+
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + i);
+      const ymd = formatYmd(dayDate);
+      const dayCol = document.createElement('div');
+      dayCol.className = 'm-week-day';
+      const head = document.createElement('div');
+      head.className = 'm-week-day-header';
+      head.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' });
+      dayCol.appendChild(head);
+
+      const track = document.createElement('div');
+      track.className = 'm-week-track';
+      track.style.setProperty('--total-minutes', totalMinutes);
+      track.dataset.date = ymd;
+      const pxPerMin = parseFloat(getComputedStyle(wrap).getPropertyValue('--px-per-min-mobile')) || 1.15;
+
+      track.addEventListener('click', (e) => {
+        const rect = track.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
+        const start = startMin + minutes;
+        const end = start + stepMin;
+        if (!isWithinMaxLimit(ymd)) {
+          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+          return;
+        }
+        openReservationModal(ymd, start, end, mobileSelectedSpace);
+      });
+
+      all.filter(b => {
+        const d = new Date(b.start_ts * 1000);
+        if (formatYmd(d) !== ymd) return false;
+        if (mobileSelectedSpace === 'WHOLE') return true;
+        return b.space === mobileSelectedSpace;
+      }).forEach((b) => {
+        const item = document.createElement('div');
+        item.className = 'm-week-booking';
+        if (b.space === 'WHOLE') item.classList.add('whole');
+        const startDate = new Date(b.start_ts * 1000);
+        const endDate = new Date(b.end_ts * 1000);
+        const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
+        const duration = (endDate - startDate) / 60000;
+        item.style.top = `calc(${minutesFromStart} * var(--px-per-min-mobile))`;
+        item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
+        const title = (b.name && b.name.trim()) ? b.name : 'Rezervace';
+        item.textContent = `${title} · ${formatTime(startDate)}`;
+        track.appendChild(item);
+      });
+
+      dayCol.appendChild(track);
+      wrap.appendChild(dayCol);
+    }
+  };
+
   const initMobileControls = () => {
     if (page !== 'public') return;
     const strip = document.getElementById('mobile-weekstrip');
@@ -696,6 +797,49 @@
     const next = document.getElementById('mobile-day-next');
     const todayBtn = document.getElementById('week-today');
     const spaceToggle = document.getElementById('mobile-space-toggle');
+    const mPrev = document.getElementById('m-week-prev');
+    const mNext = document.getElementById('m-week-next');
+    const mToday = document.getElementById('m-week-today');
+    const mDateTrigger = document.getElementById('m-week-date-trigger');
+    const weekPrev = document.getElementById('week-prev');
+    const weekNext = document.getElementById('week-next');
+    const weekDateTrigger = document.getElementById('week-date-trigger');
+    const btnNew = document.getElementById('btn-new');
+    const mBtnNew = document.getElementById('m-btn-new');
+    const viewToggle = document.querySelector('.m-view-toggle');
+    const viewButtons = viewToggle ? viewToggle.querySelectorAll('button[data-view]') : [];
+    const savedView = localStorage.getItem('mobileView');
+    if (savedView === 'day' || savedView === 'week') {
+      mobileView = savedView;
+    } else {
+      mobileView = 'week';
+    }
+
+    const applyView = () => {
+      viewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === mobileView));
+      if (mobileView === 'week') {
+        renderMobileWeekGrid();
+        renderMobileDayView();
+        const stripEl = document.getElementById('mobile-weekstrip');
+        if (stripEl) stripEl.setAttribute('hidden', 'true');
+      } else {
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        const wrapOuter = document.getElementById('m-week-grid');
+        if (wrapOuter) wrapOuter.setAttribute('hidden', 'true');
+        const stripEl = document.getElementById('mobile-weekstrip');
+        if (stripEl) stripEl.removeAttribute('hidden');
+      }
+    };
+
+    viewButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        mobileView = btn.dataset.view || 'week';
+        localStorage.setItem('mobileView', mobileView);
+        applyView();
+      });
+    });
+
     if (strip) {
       strip.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-day-index]');
@@ -703,6 +847,7 @@
         mobileDayIndex = parseInt(btn.dataset.dayIndex || '0', 10);
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       });
     }
     if (prev) {
@@ -710,6 +855,7 @@
         mobileDayIndex = Math.max(0, mobileDayIndex - 1);
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       });
     }
     if (next) {
@@ -717,6 +863,7 @@
         mobileDayIndex = Math.min(6, mobileDayIndex + 1);
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       });
     }
     if (todayBtn) {
@@ -727,10 +874,10 @@
         const diff = (day === 0 ? -6 : 1 - day);
         monday.setDate(monday.getDate() + diff);
         monday.setHours(0, 0, 0, 0);
-        const target = new Date(monday);
         mobileDayIndex = Math.min(6, Math.max(0, Math.round((now - monday) / 86400000)));
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       });
     }
     if (spaceToggle) {
@@ -740,14 +887,24 @@
         mobileSelectedSpace = btn.dataset.space || 'HALF_A';
         spaceToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        renderMobileDayView();
+        renderMobileWeekGrid();
       });
     }
     mobileMq.addEventListener('change', (e) => {
       if (e.matches) {
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       }
     });
+    applyView();
+
+    if (mPrev && weekPrev) mPrev.addEventListener('click', () => weekPrev.click());
+    if (mNext && weekNext) mNext.addEventListener('click', () => weekNext.click());
+    if (mToday && todayBtn) mToday.addEventListener('click', () => todayBtn.click());
+    if (mDateTrigger && weekDateTrigger) mDateTrigger.addEventListener('click', () => weekDateTrigger.click());
+    if (mBtnNew && btnNew) mBtnNew.addEventListener('click', () => btnNew.click());
   };
 
   initMobileControls();
@@ -791,6 +948,10 @@
     const end = new Date(weekStart);
     end.setDate(weekStart.getDate() + 6);
     label.textContent = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    const mLabel = document.getElementById('m-week-label');
+    if (mLabel) {
+      mLabel.textContent = label.textContent;
+    }
   };
 
   const loadWeek = async () => {
