@@ -470,6 +470,11 @@ input:focus, select:focus {
   z-index: 3;
 }
 
+.selection-box.selection-whole {
+  left: 6px;
+  right: 6px;
+}
+
 .selection-tooltip {
   position: fixed;
   padding: 6px 10px;

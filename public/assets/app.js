@@ -290,9 +290,28 @@
       let dragMoved = false;
       let dragStartY = 0;
       let selectionEl = null;
-      let selectionElOther = null;
       let dragStartSpace = null;
       let dragCurrentSpace = null;
+
+      const ensureSelectionElement = (space) => {
+        if (!selectionEl) {
+          selectionEl = document.createElement('div');
+          selectionEl.className = 'selection-box';
+        }
+        const desiredParent = space === 'WHOLE'
+          ? track
+          : (space === 'HALF_A' ? laneA : laneB);
+        if (selectionEl.parentElement !== desiredParent) {
+          selectionEl.remove();
+          desiredParent.appendChild(selectionEl);
+        }
+        if (space === 'WHOLE') {
+          selectionEl.classList.add('selection-whole');
+        } else {
+          selectionEl.classList.remove('selection-whole');
+        }
+        selectionEl.dataset.space = space;
+      };
 
       const updateSelection = (clientY, selectionSpace) => {
         const rect = track.getBoundingClientRect();
@@ -301,14 +320,11 @@
         const y2 = Math.max(0, Math.min(rect.height, clientY - rect.top));
         const top = Math.min(y1, y2);
         const height = Math.max(6, Math.abs(y2 - y1));
-        const applyBox = (box) => {
-          if (!box) return;
-          box.style.top = `${top}px`;
-          box.style.height = `${height}px`;
-          box.dataset.space = selectionSpace;
-        };
-        applyBox(selectionEl);
-        applyBox(selectionElOther);
+        ensureSelectionElement(selectionSpace);
+        if (selectionEl) {
+          selectionEl.style.top = `${top}px`;
+          selectionEl.style.height = `${height}px`;
+        }
         const startOffset = Math.round(top / pxPerMin / stepMin) * stepMin;
         const endOffset = Math.round((top + height) / pxPerMin / stepMin) * stepMin;
         const start = startMin + startOffset;
@@ -335,15 +351,11 @@
       const endDrag = (clientY) => {
         if (!dragActive) return;
         dragActive = false;
-        const laneSpace = selectionEl?.dataset?.space || dragCurrentSpace || null;
+        const laneSpace = selectionEl?.dataset?.space || dragCurrentSpace || dragStartSpace || null;
         const result = updateSelection(clientY, laneSpace || dragStartSpace || 'HALF_A');
         if (selectionEl) {
           selectionEl.remove();
           selectionEl = null;
-        }
-        if (selectionElOther) {
-          selectionElOther.remove();
-          selectionElOther = null;
         }
         selectionTooltip.style.display = 'none';
         if (page !== 'public') return;
@@ -370,14 +382,7 @@
           dragStartY = e.clientY - track.getBoundingClientRect().top;
           dragStartSpace = laneSpace;
           dragCurrentSpace = laneSpace;
-          selectionEl = document.createElement('div');
-          selectionEl.className = 'selection-box';
-          lane.appendChild(selectionEl);
-          selectionEl.dataset.space = laneSpace;
-          if (selectionElOther) {
-            selectionElOther.remove();
-            selectionElOther = null;
-          }
+          ensureSelectionElement(laneSpace);
           updateSelection(e.clientY, laneSpace);
         });
 
@@ -401,7 +406,7 @@
       attachLaneHandlers(laneA, 'HALF_A');
       attachLaneHandlers(laneB, 'HALF_B');
 
-      window.addEventListener('mousemove', (e) => {
+      const handleMove = (e) => {
         if (!dragActive) return;
         const rect = track.getBoundingClientRect();
         if (rect && Math.abs(e.clientY - (rect.top + dragStartY)) > 4) {
@@ -409,27 +414,33 @@
         }
         const currentSpace = getSpaceAtPoint(e.clientX, e.clientY);
         let selectionSpace = dragStartSpace;
-        if (currentSpace && currentSpace !== dragStartSpace) {
-          selectionSpace = 'WHOLE';
-        }
-        if (selectionSpace === 'WHOLE') {
-          if (!selectionElOther) {
-            const otherLane = dragStartSpace === 'HALF_A' ? laneB : laneA;
-            selectionElOther = document.createElement('div');
-            selectionElOther.className = 'selection-box';
-            otherLane.appendChild(selectionElOther);
-          }
-        } else if (selectionElOther) {
-          selectionElOther.remove();
-          selectionElOther = null;
+        if (currentSpace) {
+          selectionSpace = currentSpace !== dragStartSpace ? 'WHOLE' : dragStartSpace;
+        } else if (dragCurrentSpace) {
+          selectionSpace = dragCurrentSpace;
         }
         dragCurrentSpace = selectionSpace;
         updateSelection(e.clientY, selectionSpace);
-      });
+      };
 
-      window.addEventListener('mouseup', (e) => {
+      const handleUp = (e) => {
         if (!dragActive) return;
         endDrag(e.clientY);
+      };
+
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleUp);
+      document.addEventListener('keydown', (e) => {
+        if (!dragActive) return;
+        if (e.key === 'Escape') {
+          dragActive = false;
+          dragMoved = false;
+          if (selectionEl) {
+            selectionEl.remove();
+            selectionEl = null;
+          }
+          selectionTooltip.style.display = 'none';
+        }
       });
 
       all.filter(b => {
