@@ -78,13 +78,14 @@ function format_time(int $ts): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
+  <meta name="app-version" content="<?= h(app_version()) ?>" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>Správa rezervace</title>
   <link rel="stylesheet" href="/assets/app.css" />
 </head>
-<body>
+<body data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
     <header class="topbar">
       <div class="brand">
@@ -184,7 +185,13 @@ function format_time(int $ts): string {
         </section>
       <?php endif; ?>
     </main>
+    <footer class="content" style="padding-top:0;margin-top:-20px;">
+      <div class="app-version" data-role="app-version" aria-label="Verze aplikace" data-app-version="<?= h(app_version()) ?>">
+        <?= h(app_version()) ?>
+      </div>
+    </footer>
   </div>
   <script src="/assets/pwa.js" defer></script>
+  <script src="/assets/app.js" defer></script>
 </body>
 </html>

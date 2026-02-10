@@ -22,6 +22,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version vars
+        id: version
+        run: |
+          BUILD_NUMBER=$(git rev-list --count HEAD)
+          GIT_SHA=$(git rev-parse --short HEAD)
+          BUILD_DATE=$(date -u +"%Y-%m-%d")
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "GIT_SHA=$GIT_SHA" >> $GITHUB_ENV
+          echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+
+      - name: Show version
+        run: echo "Version v${BUILD_NUMBER} · ${GIT_SHA} · ${BUILD_DATE}"
+
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -49,7 +67,7 @@ jobs:
             exit 1
           fi
 
-          ssh -p "${PORT}" "${USER}@${HOST}" "PATH_REMOTE='${PATH_REMOTE}' DEPLOY_BRANCH='${DEPLOY_BRANCH}' bash -se" <<'EOF'
+          ssh -p "${PORT}" "${USER}@${HOST}" "PATH_REMOTE='${PATH_REMOTE}' DEPLOY_BRANCH='${DEPLOY_BRANCH}' BUILD_NUMBER='${BUILD_NUMBER}' GIT_SHA='${GIT_SHA}' BUILD_DATE='${BUILD_DATE}' bash -se" <<'EOF'
             set -euo pipefail
 
             cd "$PATH_REMOTE"
@@ -87,6 +105,11 @@ jobs:
 
             echo '--- after ---'
             git rev-parse --short HEAD
+
+            echo '--- env version ---'
+            echo "BUILD_NUMBER=${BUILD_NUMBER}"
+            echo "GIT_SHA=${GIT_SHA}"
+            echo "BUILD_DATE=${BUILD_DATE}"
 
             echo '--- migrate (if exists) ---'
             if [ -f scripts/migrate.php ]; then

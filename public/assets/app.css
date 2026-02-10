@@ -675,6 +675,21 @@ button.loading .spinner {
   transform: translateY(0);
 }
 
+.app-version {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-version:hover {
+  opacity: 1;
+}
+
 .table {
   display: grid;
   gap: 8px;

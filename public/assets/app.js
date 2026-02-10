@@ -2,6 +2,7 @@
   const body = document.body;
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const appVersion = body.dataset.appVersion || '';
   const weekStartStr = body.dataset.weekStart;
   const gridStart = body.dataset.gridStart || '06:00';
   const gridEnd = body.dataset.gridEnd || '23:00';
@@ -899,5 +900,17 @@
     initAdminForms();
   }
   loadWeek();
-})();
 
+  // Copy version to clipboard on click (nice-to-have, silent fail)
+  if (appVersion) {
+    const el = document.querySelector('[data-role="app-version"]');
+    if (el) {
+      el.addEventListener('click', () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(appVersion).catch(() => {});
+        }
+      });
+      el.title = 'Kliknutím zkopírujete verzi';
+    }
+  }
+})();

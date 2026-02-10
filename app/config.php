@@ -30,6 +30,37 @@ $CONFIG = [
 const CATEGORIES = ['MP', 'MD', 'SŽ', 'Žáci', 'Dorost', 'Muži', 'Soukromá'];
 const SPACES = ['WHOLE', 'HALF_A', 'HALF_B'];
 
+function app_version(): string {
+    static $version = null;
+    if ($version !== null) {
+        return $version;
+    }
+
+    $buildNumber = getenv('BUILD_NUMBER') ?: null;
+    $gitSha = getenv('GIT_SHA') ?: null;
+    $buildDate = getenv('BUILD_DATE') ?: null;
+
+    // Fallback: derive from git if env vars are missing.
+    if ($buildNumber === null || $gitSha === null) {
+        $buildNumber = trim((string) @shell_exec('git rev-list --count HEAD 2>/dev/null')) ?: null;
+        $gitSha = trim((string) @shell_exec('git rev-parse --short HEAD 2>/dev/null')) ?: null;
+    }
+
+    if ($buildNumber === null || $buildNumber === '') {
+        $buildNumber = '0';
+    }
+    if ($gitSha === null || $gitSha === '') {
+        $gitSha = 'dev';
+    }
+
+    $version = 'v' . $buildNumber . ' · ' . $gitSha;
+    if ($buildDate !== null && $buildDate !== '') {
+        $version .= ' · ' . $buildDate;
+    }
+
+    return $version;
+}
+
 function cfg(string $key, $default = null) {
     global $CONFIG;
     return $CONFIG[$key] ?? $default;
