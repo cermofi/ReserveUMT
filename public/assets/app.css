@@ -418,6 +418,7 @@ input:focus, select:focus {
   font-size: 13px;
   border-bottom: 1px solid var(--border);
   z-index: 2;
+  text-align: center;
 }
 
 .day-subheader {
