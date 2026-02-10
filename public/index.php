@@ -139,7 +139,7 @@ $weekLabel = $weekStart->format('o-\WW');
           <div class="hint full-span" id="max-email-hint" style="display:none;"></div>
         </div>
         <button class="btn primary" type="submit">
-          <span class="btn-text">Odeslat žádost</span>
+          <span class="btn-text">Odeslat rezervaci</span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
       </form>

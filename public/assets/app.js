@@ -769,6 +769,8 @@
         updateEmailHint();
       });
 
+    const getMaxDurationMinutes = () => (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
+
     const updateDurationWarning = () => {
       if (!formReserve || !durationWarning) return;
       const start = formReserve.start.value;
@@ -778,7 +780,7 @@
         durationWarning.textContent = '';
         return;
       }
-      const maxDurationMinutes = (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
+      const maxDurationMinutes = getMaxDurationMinutes();
       const duration = parseHm(end) - parseHm(start);
       if (maxDurationMinutes > 0 && duration > maxDurationMinutes) {
         durationWarning.textContent = `Délka rezervace přesahuje ${maxDurationHours} hodin.`;
@@ -795,7 +797,7 @@
         const startInput = formReserve.start;
         const endInput = formReserve.end;
         if (!startInput || !endInput || !startInput.value || !endInput.value) return;
-        const maxDurationMinutes = (maxDurationHours && maxDurationHours > 0) ? maxDurationHours * 60 : 0;
+        const maxDurationMinutes = getMaxDurationMinutes();
         let startMin = parseHm(startInput.value);
         let endMin = parseHm(endInput.value);
         if (endMin < startMin) {
@@ -830,9 +832,10 @@
       formReserve.addEventListener('submit', async (e) => {
         e.preventDefault();
         const duration = parseHm(formReserve.end.value || '00:00') - parseHm(formReserve.start.value || '00:00');
-        if (duration > maxDurationMinutes) {
+        const maxDurationMinutes = getMaxDurationMinutes();
+        if (maxDurationMinutes > 0 && duration > maxDurationMinutes) {
           updateDurationWarning();
-          showToast('Maximální délka rezervace je 2 hodiny.');
+          showToast('Délka rezervace přesahuje povolený limit.');
           return;
         }
         const btn = formReserve.querySelector('button[type="submit"]');
