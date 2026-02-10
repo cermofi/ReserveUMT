@@ -267,10 +267,14 @@
       subHeader.className = 'day-subheader';
       const labelA = document.createElement('span');
       labelA.textContent = 'Půlka A';
+      labelA.className = 'lane-pill';
+      const subDivider = document.createElement('span');
+      subDivider.className = 'lane-divider';
       const labelB = document.createElement('span');
-      labelB.className = 'right';
       labelB.textContent = 'Půlka B';
+      labelB.className = 'lane-pill right';
       subHeader.appendChild(labelA);
+      subHeader.appendChild(subDivider);
       subHeader.appendChild(labelB);
       const track = document.createElement('div');
       track.className = 'day-track';
@@ -279,9 +283,12 @@
       laneWrap.className = 'lane-wrap';
       const laneA = document.createElement('div');
       laneA.className = 'day-lane lane-a';
+      const laneDivider = document.createElement('div');
+      laneDivider.className = 'lane-divider';
       const laneB = document.createElement('div');
       laneB.className = 'day-lane lane-b';
       laneWrap.appendChild(laneA);
+      laneWrap.appendChild(laneDivider);
       laneWrap.appendChild(laneB);
       track.appendChild(laneWrap);
       track.dataset.date = ymd;
