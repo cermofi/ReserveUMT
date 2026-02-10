@@ -91,29 +91,31 @@ $weekLabel = $weekStart->format('o-\WW');
       <form id="form-reserve" class="form">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>" />
         <div class="grid-2">
-          <label>
+          <label class="full-span">
             Datum
             <input type="date" name="date" required autocomplete="off" />
             <div class="hint" id="max-advance-hint" style="display:none; margin-top:4px;"></div>
           </label>
-          <label>
-            Začátek
-            <div class="time-row">
-              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
-              <input type="time" name="start" required inputmode="numeric" />
-              <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
-            </div>
-          </label>
-          <label>
-            Konec
-            <div class="time-row">
-              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
-              <input type="time" name="end" required inputmode="numeric" />
-              <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
-            </div>
-          </label>
-          <div class="hint">Maximální délka veřejné rezervace je 2 hodiny.</div>
-          <div class="warning" id="duration-warning" aria-live="polite"></div>
+          <div class="grid-2 full-span">
+            <label>
+              Začátek
+              <div class="time-row">
+                <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="-30">−30</button>
+                <input type="time" name="start" required inputmode="numeric" />
+                <button class="btn tiny ghost" type="button" data-time-adjust="start" data-delta="30">+30</button>
+              </div>
+            </label>
+            <label>
+              Konec
+              <div class="time-row">
+                <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="-30">−30</button>
+                <input type="time" name="end" required inputmode="numeric" />
+                <button class="btn tiny ghost" type="button" data-time-adjust="end" data-delta="30">+30</button>
+              </div>
+            </label>
+          </div>
+          <div class="hint full-span">Maximální délka veřejné rezervace je 2 hodiny.</div>
+          <div class="warning full-span" id="duration-warning" aria-live="polite"></div>
           <label>
             Prostor
             <select name="space" required>

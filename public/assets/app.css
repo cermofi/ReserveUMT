@@ -234,6 +234,10 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.full-span {
+  grid-column: 1 / -1;
+}
+
 .form {
   display: grid;
   gap: 12px;
