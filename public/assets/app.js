@@ -134,6 +134,15 @@
     if (setMin) input.min = todayYmd(); else input.removeAttribute('min');
   };
 
+  const formResetToDefaults = (form) => {
+    if (!form) return;
+    form.reset();
+    applyMaxLimitsToForm();
+    updateAdvanceHint();
+    updateEmailHint();
+    updateDurationHint();
+  };
+
   const preventDateClear = (input) => {
     if (!input || input.dataset.noclear === '1') return;
     input.dataset.noclear = '1';
@@ -175,13 +184,21 @@
     if (!(target instanceof HTMLElement)) return;
     const closeId = target.dataset.close;
     if (closeId) {
+      if (closeId === 'modal-reserve') {
+        formResetToDefaults(document.getElementById('form-reserve'));
+      }
       closeModal(closeId);
     }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal').forEach((m) => m.setAttribute('aria-hidden', 'true'));
+      document.querySelectorAll('.modal').forEach((m) => {
+        m.setAttribute('aria-hidden', 'true');
+        if (m.id === 'modal-reserve') {
+          formResetToDefaults(document.getElementById('form-reserve'));
+        }
+      });
     }
   });
 
@@ -663,6 +680,7 @@
       showToast('Rezervace nelze vytvářet tak daleko dopředu.');
       return;
     }
+    formResetToDefaults(form);
     form.date.value = dateStr;
     form.date.dataset.prevDate = form.date.value;
     const baseDate = parseYmd(dateStr);
@@ -684,6 +702,7 @@
   const openEditModal = (booking) => {
     const form = document.getElementById('form-edit');
     if (!form) return;
+    form.reset();
     const start = new Date(booking.start_ts * 1000);
     const end = new Date(booking.end_ts * 1000);
     form.id.value = booking.id;
@@ -850,6 +869,7 @@
           closeModal('modal-reserve');
           if (res.booking_id) {
             showToast('Rezervace byla uložena.');
+            formResetToDefaults(formReserve);
             await loadWeek();
             return;
           }
