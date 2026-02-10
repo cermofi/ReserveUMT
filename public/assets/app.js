@@ -244,9 +244,27 @@
       const header = document.createElement('div');
       header.className = 'day-header';
       header.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      const subHeader = document.createElement('div');
+      subHeader.className = 'day-subheader';
+      const labelA = document.createElement('span');
+      labelA.textContent = 'Půlka A';
+      const labelB = document.createElement('span');
+      labelB.className = 'right';
+      labelB.textContent = 'Půlka B';
+      subHeader.appendChild(labelA);
+      subHeader.appendChild(labelB);
       const track = document.createElement('div');
       track.className = 'day-track';
       track.style.setProperty('--total-minutes', totalMinutes);
+      const laneWrap = document.createElement('div');
+      laneWrap.className = 'lane-wrap';
+      const laneA = document.createElement('div');
+      laneA.className = 'day-lane lane-a';
+      const laneB = document.createElement('div');
+      laneB.className = 'day-lane lane-b';
+      laneWrap.appendChild(laneA);
+      laneWrap.appendChild(laneB);
+      track.appendChild(laneWrap);
       track.dataset.date = ymd;
 
       let dragActive = false;
@@ -255,7 +273,8 @@
       let selectionEl = null;
 
       const updateSelection = (clientY) => {
-        const rect = track.getBoundingClientRect();
+        const container = selectionEl?.parentElement || track;
+        const rect = container.getBoundingClientRect();
         const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
         const y1 = Math.max(0, Math.min(rect.height, dragStartY));
         const y2 = Math.max(0, Math.min(rect.height, clientY - rect.top));
@@ -279,6 +298,7 @@
       const endDrag = (clientY) => {
         if (!dragActive) return;
         dragActive = false;
+        const laneSpace = selectionEl?.dataset?.space || null;
         const result = updateSelection(clientY);
         if (selectionEl) {
           selectionEl.remove();
@@ -287,34 +307,57 @@
         selectionTooltip.style.display = 'none';
         if (page !== 'public') return;
         if (result) {
-          openReservationModal(ymd, result.start, result.end);
+          openReservationModal(ymd, result.start, result.end, laneSpace);
         }
         setTimeout(() => {
           dragMoved = false;
         }, 0);
       };
 
-      track.addEventListener('mousedown', (e) => {
-        if (page !== 'public') return;
-        if (e.button !== 0) return;
-        if (e.target && e.target.classList.contains('booking')) return;
-        if (!isWithinMaxLimit(ymd)) {
-          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
-          return;
-        }
-        e.preventDefault();
-        dragActive = true;
-        dragMoved = false;
-        dragStartY = e.clientY - track.getBoundingClientRect().top;
-        selectionEl = document.createElement('div');
-        selectionEl.className = 'selection-box';
-        track.appendChild(selectionEl);
-        updateSelection(e.clientY);
-      });
+      const attachLaneHandlers = (lane, laneSpace) => {
+        lane.addEventListener('mousedown', (e) => {
+          if (page !== 'public') return;
+          if (e.button !== 0) return;
+          if (e.target && e.target.classList.contains('booking')) return;
+          if (!isWithinMaxLimit(ymd)) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          e.preventDefault();
+          dragActive = true;
+          dragMoved = false;
+          dragStartY = e.clientY - lane.getBoundingClientRect().top;
+          selectionEl = document.createElement('div');
+          selectionEl.className = 'selection-box';
+          lane.appendChild(selectionEl);
+          updateSelection(e.clientY);
+          selectionEl.dataset.space = laneSpace;
+        });
+
+        lane.addEventListener('click', (e) => {
+          if (page !== 'public') return;
+          if (dragActive || dragMoved) return;
+          const rect = lane.getBoundingClientRect();
+          const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
+          const offset = e.clientY - rect.top;
+          const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
+          const start = startMin + minutes;
+          const end = start + stepMin;
+          if (!isWithinMaxLimit(ymd)) {
+            showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+            return;
+          }
+          openReservationModal(ymd, start, end, laneSpace);
+        });
+      };
+
+      attachLaneHandlers(laneA, 'HALF_A');
+      attachLaneHandlers(laneB, 'HALF_B');
 
       window.addEventListener('mousemove', (e) => {
         if (!dragActive) return;
-        if (Math.abs(e.clientY - (track.getBoundingClientRect().top + dragStartY)) > 4) {
+        const rect = selectionEl?.parentElement?.getBoundingClientRect();
+        if (rect && Math.abs(e.clientY - (rect.top + dragStartY)) > 4) {
           dragMoved = true;
         }
         updateSelection(e.clientY);
@@ -323,22 +366,6 @@
       window.addEventListener('mouseup', (e) => {
         if (!dragActive) return;
         endDrag(e.clientY);
-      });
-
-      track.addEventListener('click', (e) => {
-        if (page !== 'public') return;
-        if (dragActive || dragMoved) return;
-        const rect = track.getBoundingClientRect();
-        const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
-        const offset = e.clientY - rect.top;
-        const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
-        const start = startMin + minutes;
-        const end = start + stepMin;
-        if (!isWithinMaxLimit(ymd)) {
-          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
-          return;
-        }
-        openReservationModal(ymd, start, end);
       });
 
       all.filter(b => {
@@ -427,10 +454,17 @@
             item.click();
           }
         });
-        track.appendChild(item);
+        if (b.space === 'HALF_A') {
+          laneA.appendChild(item);
+        } else if (b.space === 'HALF_B') {
+          laneB.appendChild(item);
+        } else {
+          track.appendChild(item);
+        }
       });
 
       col.appendChild(header);
+      col.appendChild(subHeader);
       col.appendChild(track);
       dayCols.appendChild(col);
     }
@@ -619,7 +653,7 @@
     }
   };
 
-  const openReservationModal = (dateStr, startMin, endMin) => {
+  const openReservationModal = (dateStr, startMin, endMin, spaceChoice = null) => {
     const form = document.getElementById('form-reserve');
     if (!form) return;
     const limit = maxAllowedDate();
@@ -638,6 +672,9 @@
     end.setMinutes(endMin);
     form.start.value = formatTime(start);
     form.end.value = formatTime(end);
+    if (spaceChoice && form.space) {
+      form.space.value = spaceChoice;
+    }
     if (limit) form.date.max = limit; else form.date.removeAttribute('max');
     openModal('modal-reserve');
   };
