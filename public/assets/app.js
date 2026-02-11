@@ -63,8 +63,9 @@
     HALF_A: body.dataset.spaceLabelA || 'Půlka A',
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
-  const mobileMq = window.matchMedia('(max-width: 820px)');
+  const mobileMq = window.matchMedia('(max-width: 1023px)');
   let mobileDayIndex = 0;
+  let mobileView = 'week';
   let mobileSelectedSpace = 'HALF_A';
   let mobileBookings = [];
   let mobileRecurring = [];
@@ -107,6 +108,15 @@
 
   const formatDayLabel = (date) => {
     return date.toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' });
+  };
+
+  const formatCompactDate = (date, includeYear = false) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    if (includeYear) {
+      return `${day}.${month}.${date.getFullYear()}`;
+    }
+    return `${day}.${month}.`;
   };
 
   const minutesToTime = (min) => {
@@ -816,6 +826,8 @@
     }
 
     const applyView = () => {
+      body.classList.toggle('mobile-view-week', mobileView === 'week');
+      body.classList.toggle('mobile-view-day', mobileView === 'day');
       viewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === mobileView));
       if (mobileView === 'week') {
         renderMobileWeekGrid();
@@ -896,6 +908,8 @@
         renderMobileWeekstrip();
         renderMobileDayView();
         renderMobileWeekGrid();
+      } else {
+        body.classList.remove('mobile-view-week', 'mobile-view-day');
       }
     });
     applyView();
@@ -947,10 +961,15 @@
     if (!label) return;
     const end = new Date(weekStart);
     end.setDate(weekStart.getDate() + 6);
-    label.textContent = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    const desktopLabel = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    label.textContent = desktopLabel;
     const mLabel = document.getElementById('m-week-label');
     if (mLabel) {
-      mLabel.textContent = label.textContent;
+      const sameYear = weekStart.getFullYear() === end.getFullYear();
+      const startCompact = formatCompactDate(weekStart, !sameYear);
+      const endCompact = formatCompactDate(end, true);
+      mLabel.textContent = `${startCompact}–${endCompact}`;
+      mLabel.title = desktopLabel;
     }
   };
 
@@ -972,6 +991,7 @@
         mobileRecurring = res.recurring;
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       }
       renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
       const toggle = document.getElementById('toggle-verify');
@@ -1006,6 +1026,7 @@
       if (mobileMq.matches) {
         renderMobileWeekstrip();
         renderMobileDayView();
+        renderMobileWeekGrid();
       }
     }
   };

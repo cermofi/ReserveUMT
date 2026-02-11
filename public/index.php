@@ -54,17 +54,6 @@ $weekLabel = $weekStart->format('o-\WW');
     </header>
 
     <main class="content">
-      <div class="m-topbar">
-        <div class="m-brand">
-          <div class="m-title">UMT Rozpis</div>
-          <div class="m-subtitle">Týdenní rozpis</div>
-        </div>
-        <div class="m-actions">
-          <button class="btn pill" id="m-btn-new" aria-label="Nová rezervace">＋</button>
-          <a class="btn pill" id="m-btn-admin" href="/admin.php" aria-label="Administrace">⚙︎</a>
-        </div>
-      </div>
-
       <div class="week-controls">
         <button class="btn ghost" id="week-prev">←</button>
         <button class="btn ghost" id="week-today">Tento týden</button>
@@ -76,21 +65,36 @@ $weekLabel = $weekStart->format('o-\WW');
         <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
 
-      <div class="m-weekbar">
-        <button class="btn ghost" id="m-week-prev" aria-label="Předchozí týden">←</button>
-        <div class="m-week-center">
+      <div class="m-mobile-controls">
+        <div class="m-topbar">
+          <div class="m-brand">
+            <div class="m-title">UMT Rozpis</div>
+            <div class="m-subtitle">Týdenní rozpis</div>
+          </div>
+          <div class="m-actions">
+            <button class="btn pill" id="m-btn-new" aria-label="Nová rezervace">+</button>
+            <a class="btn pill" id="m-btn-admin" href="/admin.php" aria-label="Administrace">⚙︎</a>
+          </div>
+        </div>
+
+        <div class="m-weekbar">
+          <button class="btn ghost" id="m-week-prev" aria-label="Předchozí týden">←</button>
           <button class="btn ghost" id="m-week-today">Tento týden</button>
           <div id="m-week-label" class="m-week-label"></div>
-        </div>
-        <div class="m-week-right">
           <button class="btn ghost" id="m-week-date-trigger" aria-label="Vybrat datum">📅</button>
           <button class="btn ghost" id="m-week-next" aria-label="Další týden">→</button>
         </div>
-      </div>
 
-      <div class="m-view-toggle">
-        <button type="button" data-view="week" class="active">Týden</button>
-        <button type="button" data-view="day">Den</button>
+        <div class="m-view-toggle">
+          <button type="button" data-view="week" class="active">Týden</button>
+          <button type="button" data-view="day">Den</button>
+        </div>
+
+        <div class="mobile-space-toggle" id="mobile-space-toggle">
+          <button type="button" data-space="HALF_A" class="active">A</button>
+          <button type="button" data-space="HALF_B">B</button>
+          <button type="button" data-space="WHOLE">Celá</button>
+        </div>
       </div>
 
       <div class="legend-split">
@@ -104,11 +108,6 @@ $weekLabel = $weekStart->format('o-\WW');
           <button class="btn ghost" type="button" id="mobile-day-prev" aria-label="Předchozí den">←</button>
           <div class="mobile-day-label" id="mobile-day-label"></div>
           <button class="btn ghost" type="button" id="mobile-day-next" aria-label="Další den">→</button>
-        </div>
-        <div class="mobile-space-toggle" id="mobile-space-toggle">
-          <button type="button" data-space="HALF_A" class="active">A</button>
-          <button type="button" data-space="HALF_B">B</button>
-          <button type="button" data-space="WHOLE">Celá</button>
         </div>
         <div id="m-week-grid" class="m-week-grid-wrap"></div>
         <div class="mobile-day-wrap">

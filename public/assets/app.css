@@ -803,182 +803,269 @@ button.loading .spinner {
 }
 
 .mobile-calendar,
+.m-mobile-controls,
 .m-topbar,
 .m-weekbar,
 .m-view-toggle,
-.m-week-grid-wrap {
+.m-week-grid-wrap,
+.mobile-space-toggle {
   display: none;
 }
 
 @media (max-width: 820px) {
-  .topbar,
-  .week-controls,
-  .agenda {
+  body[data-page="admin"] .topbar,
+  body[data-page="admin"] .week-controls,
+  body[data-page="admin"] .agenda {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  body[data-page="public"] {
+    overflow: hidden;
+  }
+
+  body[data-page="public"] .topbar,
+  body[data-page="public"] .week-controls,
+  body[data-page="public"] .calendar-wrap,
+  body[data-page="public"] .agenda,
+  body[data-page="public"] .legend-split,
+  body[data-page="public"] footer.content {
     display: none;
   }
 
-  .m-topbar {
+  body[data-page="public"] main.content {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: calc(8px + var(--safe-top)) 10px calc(10px + var(--safe-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  body[data-page="public"] .m-mobile-controls {
+    display: grid;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 18;
+    background: var(--bg);
+    padding-bottom: 2px;
+  }
+
+  body[data-page="public"] .m-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0;
+    gap: 10px;
+    min-height: 72px;
+    padding: 0 2px;
   }
-  .m-brand .m-title {
-    font-size: 16px;
+
+  body[data-page="public"] .m-brand .m-title {
+    font-size: 18px;
     font-weight: 700;
+    line-height: 1.2;
   }
-  .m-brand .m-subtitle {
+
+  body[data-page="public"] .m-brand .m-subtitle {
     font-size: 12px;
     color: var(--muted);
     line-height: 1.2;
   }
-  .m-actions {
+
+  body[data-page="public"] .m-actions {
     display: flex;
     gap: 8px;
-  }
-  .m-actions .btn.pill {
-    min-width: 40px;
-    padding: 8px 10px;
-    border-radius: 999px;
+    flex-shrink: 0;
   }
 
-  .m-weekbar {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+  body[data-page="public"] .m-actions .btn.pill {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    font-size: 19px;
+    line-height: 1;
   }
-  .m-week-center {
-    display: flex;
+
+  body[data-page="public"] .m-weekbar {
+    display: grid;
+    grid-template-columns: 44px auto minmax(0, 1fr) 44px 44px;
     align-items: center;
     gap: 6px;
-    min-width: 0;
   }
-  .m-week-center .m-week-label {
+
+  body[data-page="public"] .m-weekbar .btn {
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 12px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  body[data-page="public"] #m-week-prev,
+  body[data-page="public"] #m-week-next,
+  body[data-page="public"] #m-week-date-trigger {
+    padding: 0;
+    font-size: 17px;
+  }
+
+  body[data-page="public"] #m-week-today {
+    white-space: nowrap;
+  }
+
+  body[data-page="public"] .m-week-label {
+    min-width: 0;
+    text-align: center;
     font-size: 13px;
+    font-weight: 600;
     color: var(--muted);
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  body[data-page="public"] .m-view-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  body[data-page="public"] .m-view-toggle button,
+  body[data-page="public"] .mobile-space-toggle button {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    min-height: 44px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 0 8px;
+  }
+
+  body[data-page="public"] .m-view-toggle button.active,
+  body[data-page="public"] .mobile-space-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  body[data-page="public"] .mobile-space-toggle {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  body[data-page="public"] .mobile-calendar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  body[data-page="public"] .mobile-weekstrip {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  body[data-page="public"] .mobile-weekstrip button {
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 4px;
+  }
+
+  body[data-page="public"] .mobile-weekstrip button.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  body[data-page="public"] .mobile-day-header {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  body[data-page="public"] .mobile-day-header .btn {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    padding: 0;
+    font-size: 17px;
+  }
+
+  body[data-page="public"] .mobile-day-label {
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .m-week-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .m-weekbar .btn {
-    min-height: 38px;
-    padding: 8px 12px;
-  }
 
-  .m-view-toggle {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin: 4px 0 12px;
-  }
-  .m-view-toggle button {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-    padding: 10px 0;
-    border-radius: 12px;
-    font-weight: 600;
-  }
-  .m-view-toggle button.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: transparent;
-  }
-
-  .calendar {
+  body[data-page="public"]:not(.mobile-view-day) .mobile-day-header,
+  body[data-page="public"]:not(.mobile-view-day) .mobile-weekstrip {
     display: none;
   }
-  .agenda {
+
+  body[data-page="public"]:not(.mobile-view-day) .mobile-day-wrap {
     display: none;
   }
-  .mobile-calendar {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+
+  body[data-page="public"] .mobile-day-wrap {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .mobile-weekstrip {
+
+  body[data-page="public"] .mobile-timeline {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: 56px minmax(0, 1fr);
     gap: 6px;
-  }
-  .mobile-weekstrip button {
-    padding: 8px 6px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-    font-size: 12px;
-  }
-  .mobile-weekstrip button.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: transparent;
-  }
-  .mobile-day-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-  }
-  .mobile-day-label {
-    font-weight: 700;
-    font-size: 16px;
-  }
-  .mobile-space-toggle {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-  }
-  .mobile-space-toggle button {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-    padding: 8px 6px;
-    border-radius: 12px;
-    font-weight: 600;
-  }
-  .mobile-space-toggle button.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: transparent;
-  }
-  .mobile-day-wrap {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--panel);
-    overflow: hidden;
-  }
-  .mobile-timeline {
-    display: grid;
-    grid-template-columns: 64px 1fr;
-    gap: 8px;
     padding: 8px;
-    --px-per-min-mobile: 1.15px;
+    --px-per-min-mobile: 1.05px;
+    min-width: 280px;
   }
-  .mobile-time-col {
-    position: relative;
+
+  body[data-page="public"] .mobile-time-col {
+    position: sticky;
+    left: 0;
+    background: var(--panel);
+    z-index: 2;
   }
-  .mobile-time-labels {
+
+  body[data-page="public"] .mobile-time-labels {
     position: relative;
     height: calc(var(--total-minutes) * var(--px-per-min-mobile));
     border-right: 1px solid var(--border);
   }
-  .mobile-time-label {
+
+  body[data-page="public"] .mobile-time-label {
     position: absolute;
     left: 0;
     font-size: 11px;
     color: var(--muted);
     transform: translateY(-6px);
   }
-  .mobile-day-track {
+
+  body[data-page="public"] .mobile-day-track {
     position: relative;
     height: calc(var(--total-minutes) * var(--px-per-min-mobile));
     background-image:
@@ -989,20 +1076,24 @@ button.loading .spinner {
     overflow: hidden;
     border-radius: 10px;
   }
-  .mobile-lane-wrap {
+
+  body[data-page="public"] .mobile-lane-wrap {
     position: absolute;
     inset: 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .mobile-lane {
+
+  body[data-page="public"] .mobile-lane {
     position: relative;
   }
-  .mobile-lane + .mobile-lane {
+
+  body[data-page="public"] .mobile-lane + .mobile-lane {
     border-left: 1px solid var(--border);
   }
-  .m-booking {
+
+  body[data-page="public"] .m-booking {
     position: absolute;
     left: 4px;
     right: 4px;
@@ -1014,82 +1105,108 @@ button.loading .spinner {
     overflow: hidden;
     min-width: 0;
   }
-  .m-booking.whole {
+
+  body[data-page="public"] .m-booking.whole {
     left: 4px;
     right: 4px;
   }
-  .m-booking-title {
+
+  body[data-page="public"] .m-booking-title {
     font-weight: 600;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .m-booking-time {
+
+  body[data-page="public"] .m-booking-time {
     font-size: 10px;
     color: var(--muted);
   }
 
-  .m-week-grid-wrap {
+  body[data-page="public"] .m-week-grid-wrap {
     display: block;
-    overflow-x: auto;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel);
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .m-week-grid {
+
+  body[data-page="public"] .m-week-grid {
+    --m-week-head-h: 34px;
+    --px-per-min-mobile: 1.05px;
     display: grid;
-    grid-auto-flow: column;
-    grid-template-columns: 64px repeat(7, minmax(180px, 1fr));
+    grid-template-columns: 56px repeat(7, minmax(124px, 1fr));
     position: relative;
+    width: max-content;
     min-width: 100%;
   }
-  .m-week-time {
+
+  body[data-page="public"] .m-week-time {
     position: sticky;
     left: 0;
     background: var(--panel);
-    z-index: 2;
-    padding: 8px;
+    z-index: 4;
+    padding: calc(var(--m-week-head-h) + 8px) 6px 8px;
     border-right: 1px solid var(--border);
   }
-  .m-week-time-labels {
+
+  body[data-page="public"] .m-week-time-labels {
     position: relative;
     height: calc(var(--total-minutes) * var(--px-per-min-mobile));
   }
-  .m-week-time-label {
+
+  body[data-page="public"] .m-week-time-label {
     position: absolute;
     left: 0;
     font-size: 11px;
     color: var(--muted);
     transform: translateY(-6px);
   }
-  .m-week-day {
+
+  body[data-page="public"] .m-week-day {
     position: relative;
-    padding: 8px;
+    padding: 8px 6px;
     border-right: 1px solid var(--border);
+    background: var(--panel);
   }
-  .m-week-day:last-child {
+
+  body[data-page="public"] .m-week-day:last-child {
     border-right: none;
   }
-  .m-week-day-header {
+
+  body[data-page="public"] .m-week-day-header {
     position: sticky;
     top: 0;
-    background: var(--panel);
-    padding-bottom: 6px;
+    min-height: var(--m-week-head-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
     font-weight: 700;
-    z-index: 1;
+    background: var(--panel);
+    z-index: 3;
+    margin: -8px -6px 8px;
+    padding: 8px 4px 6px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
   }
-  .m-week-track {
+
+  body[data-page="public"] .m-week-track {
     position: relative;
     height: calc(var(--total-minutes) * var(--px-per-min-mobile));
     background-image:
       linear-gradient(to bottom, rgba(100, 116, 139, 0.1) 1px, transparent 1px),
-      linear-gradient(to right, rgba(100,116,139,0.15) 1px, transparent 1px);
+      linear-gradient(to right, rgba(100, 116, 139, 0.15) 1px, transparent 1px);
     background-size: 100% calc(var(--px-per-min-mobile) * 30), 100% 100%;
     border-radius: 10px;
     overflow: hidden;
   }
-  .m-week-booking {
+
+  body[data-page="public"] .m-week-booking {
     position: absolute;
     left: 4px;
     right: 4px;
@@ -1101,9 +1218,31 @@ button.loading .spinner {
     overflow: hidden;
     min-width: 0;
   }
-  .m-week-booking.whole {
+
+  body[data-page="public"] .m-week-booking.whole {
     left: 4px;
     right: 4px;
+  }
+}
+
+@media (max-width: 560px) {
+  body[data-page="public"] .m-weekbar {
+    grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
+    grid-template-areas:
+      "prev today date next"
+      "label label label label";
+  }
+
+  body[data-page="public"] #m-week-prev { grid-area: prev; }
+  body[data-page="public"] #m-week-today { grid-area: today; }
+  body[data-page="public"] #m-week-date-trigger { grid-area: date; }
+  body[data-page="public"] #m-week-next { grid-area: next; }
+
+  body[data-page="public"] .m-week-label {
+    grid-area: label;
+    white-space: normal;
+    line-height: 1.15;
+    padding: 0 2px;
   }
 }
 .agenda-item {
@@ -1113,7 +1252,7 @@ button.loading .spinner {
   background: var(--panel);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .calendar { display: grid; }
   .agenda { display: none; }
   .content { padding: 24px 24px 60px; }
