@@ -65,7 +65,7 @@ $weekLabel = $weekStart->format('o-\WW');
         <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
 
-      <div class="m-mobile-controls">
+      <div class="m-mobile-controls m-top">
         <div class="m-topbar">
           <div class="m-brand">
             <div class="m-title">UMT Rozpis</div>
@@ -101,13 +101,14 @@ $weekLabel = $weekStart->format('o-\WW');
         <span>Půlka A = půlka blíž ke vchodu</span><br>
         <span>Půlka B = půlka dál od vchodu</span>
       </div>
+      <div class="m-legend" aria-label="Vysvětlení půlek hřiště">
+        Půlka A = blíž ke vchodu • Půlka B = dál od vchodu
+      </div>
 
       <div id="mobile-calendar" class="mobile-calendar">
         <div id="mobile-weekstrip" class="mobile-weekstrip"></div>
         <div class="mobile-day-header">
-          <button class="btn ghost" type="button" id="mobile-day-prev" aria-label="Předchozí den">←</button>
           <div class="mobile-day-label" id="mobile-day-label"></div>
-          <button class="btn ghost" type="button" id="mobile-day-next" aria-label="Další den">→</button>
         </div>
         <div id="m-week-grid" class="m-week-grid-wrap"></div>
         <div class="mobile-day-wrap">
