@@ -77,7 +77,6 @@
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
   const mobileMq = window.matchMedia('(max-width: 1023px)');
-  const mobileHalfColumnsMq = window.matchMedia('(max-width: 520px)');
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
@@ -775,7 +774,7 @@
       track.className = 'm-week-track';
       track.style.setProperty('--total-minutes', totalMinutes);
       track.dataset.date = ymd;
-      const useHalfColumns = mobileHalfColumnsMq.matches;
+      const useHalfColumns = mobileMq.matches;
       if (useHalfColumns) {
         track.classList.add('has-half-lanes');
       }
@@ -831,7 +830,7 @@
         item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
         const title = (b.name && b.name.trim()) ? b.name : 'Rezervace';
         const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
-        if (mobileHalfColumnsMq.matches) {
+        if (mobileMq.matches) {
           const titleEl = document.createElement('div');
           titleEl.className = 'm-week-booking-title';
           titleEl.textContent = title;
