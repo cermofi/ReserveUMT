@@ -1310,6 +1310,7 @@ button.loading .spinner {
     column-gap: 12px;
     align-items: stretch;
     overflow: visible;
+    isolation: isolate;
   }
 
   body[data-page="public"] #form-reserve .time-row > button[data-time-adjust] {
@@ -1319,6 +1320,9 @@ button.loading .spinner {
     padding: 0 8px;
     flex-shrink: 0;
     transform: translateZ(0);
+    position: relative;
+    z-index: 2;
+    touch-action: manipulation;
   }
 
   body[data-page="public"] #form-reserve .time-row > input[type="time"] {
@@ -1327,6 +1331,8 @@ button.loading .spinner {
     height: 48px;
     box-sizing: border-box;
     overflow: visible;
+    position: relative;
+    z-index: 1;
   }
 
   /* iOS Safari fix: time step buttons overlap */
@@ -1335,6 +1341,12 @@ button.loading .spinner {
     body[data-page="public"] #form-reserve .time-row > input[type="time"] {
       -webkit-appearance: none;
       appearance: none;
+    }
+
+    body[data-page="public"] #form-reserve .time-row > input[type="time"] {
+      padding-left: 10px;
+      padding-right: 10px;
+      line-height: 1.2;
     }
   }
 
