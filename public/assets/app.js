@@ -4,6 +4,11 @@
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
   const clearLegacyClientCache = () => {
+    // Drop stale client state from older builds that used mobile mode persistence.
+    try {
+      localStorage.removeItem('mobileView');
+      sessionStorage.removeItem('mobileView');
+    } catch (_) {}
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
         .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister().catch(() => false))))
