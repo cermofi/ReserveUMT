@@ -323,14 +323,6 @@
             <dt>Prostor</dt>
             <dd data-field="space"></dd>
           </div>
-          <div class="m-booking-modal-row">
-            <dt data-field="extra-label">Poznámka / kategorie</dt>
-            <dd data-field="extra"></dd>
-          </div>
-          <div class="m-booking-modal-row" data-optional="contact" hidden>
-            <dt>Kontakt</dt>
-            <dd data-field="contact"></dd>
-          </div>
         </dl>
       </div>
     `;
@@ -364,22 +356,10 @@
     const timeText = sameDay
       ? `${formatTime(start)}–${formatTime(end)}`
       : `${formatTime(start)} – ${end.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${formatTime(end)}`;
-    const extraValue = booking.category || booking.note || '—';
-    const extraLabel = booking.category ? 'Kategorie' : 'Poznámka';
     setMobileBookingField(modal, 'name', booking.name || 'Rezervace');
     setMobileBookingField(modal, 'date', dateText);
     setMobileBookingField(modal, 'time', timeText);
     setMobileBookingField(modal, 'space', mobileSpaceDetailLabel(booking.space));
-    setMobileBookingField(modal, 'extra', extraValue);
-    const extraLabelEl = modal.querySelector('[data-field="extra-label"]');
-    if (extraLabelEl) extraLabelEl.textContent = extraLabel;
-    const contactRow = modal.querySelector('[data-optional="contact"]');
-    if (booking.contact) {
-      setMobileBookingField(modal, 'contact', booking.contact);
-      if (contactRow) contactRow.hidden = false;
-    } else if (contactRow) {
-      contactRow.hidden = true;
-    }
     openModal(MOBILE_BOOKING_MODAL_ID);
   };
 
@@ -391,23 +371,6 @@
     el.dataset.startTs = String(booking.start_ts ?? '');
     el.dataset.endTs = String(booking.end_ts ?? '');
     el.dataset.space = String(booking.space || 'WHOLE');
-    if (booking.note && String(booking.note).trim()) {
-      el.dataset.note = String(booking.note).trim();
-    } else {
-      delete el.dataset.note;
-    }
-    if (booking.category && String(booking.category).trim()) {
-      el.dataset.category = String(booking.category).trim();
-    } else {
-      delete el.dataset.category;
-    }
-    if (booking.contact && String(booking.contact).trim()) {
-      el.dataset.contact = String(booking.contact).trim();
-    } else if (booking.email && String(booking.email).trim()) {
-      el.dataset.contact = String(booking.email).trim();
-    } else {
-      delete el.dataset.contact;
-    }
   };
 
   const bookingFromMobileElement = (el) => {
@@ -423,9 +386,6 @@
       start_ts: startTs,
       end_ts: endTs,
       space: el.dataset.space || 'WHOLE',
-      note: el.dataset.note || '',
-      category: el.dataset.category || '',
-      contact: el.dataset.contact || '',
     };
   };
 
