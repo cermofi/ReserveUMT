@@ -808,8 +808,7 @@ button.loading .spinner {
 .m-weekbar,
 .m-view-toggle,
 .m-week-grid-wrap,
-.mobile-space-toggle,
-.m-legend {
+.mobile-space-toggle {
   display: none;
 }
 
@@ -821,9 +820,8 @@ button.loading .spinner {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px) {
   body[data-page="public"] {
-    --m-time-col-w: 64px;
     overflow: hidden;
   }
 
@@ -840,10 +838,10 @@ button.loading .spinner {
     max-width: none;
     width: 100%;
     margin: 0;
-    padding: calc(6px + var(--safe-top)) 10px calc(8px + var(--safe-bottom));
+    padding: calc(8px + var(--safe-top)) 10px calc(10px + var(--safe-bottom));
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     min-height: 100dvh;
     height: 100dvh;
     overflow: hidden;
@@ -851,12 +849,12 @@ button.loading .spinner {
 
   body[data-page="public"] .m-mobile-controls {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     position: sticky;
     top: 0;
     z-index: 18;
     background: var(--bg);
-    padding-bottom: 1px;
+    padding-bottom: 2px;
   }
 
   body[data-page="public"] .m-topbar {
@@ -898,10 +896,9 @@ button.loading .spinner {
 
   body[data-page="public"] .m-weekbar {
     display: grid;
-    grid-template-columns: 44px max-content minmax(0, 1fr) 44px 44px;
-    grid-template-areas: "prev today range cal next";
+    grid-template-columns: 44px auto minmax(0, 1fr) 44px 44px;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   body[data-page="public"] .m-weekbar .btn {
@@ -911,11 +908,6 @@ button.loading .spinner {
     padding: 0 10px;
     font-size: 14px;
   }
-
-  body[data-page="public"] #m-week-prev { grid-area: prev; }
-  body[data-page="public"] #m-week-today { grid-area: today; }
-  body[data-page="public"] #m-week-date-trigger { grid-area: cal; }
-  body[data-page="public"] #m-week-next { grid-area: next; }
 
   body[data-page="public"] #m-week-prev,
   body[data-page="public"] #m-week-next,
@@ -929,16 +921,13 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .m-week-label {
-    grid-area: range;
     min-width: 0;
     text-align: center;
     font-size: 13px;
     font-weight: 600;
     color: var(--muted);
-    white-space: normal;
+    white-space: nowrap;
     line-height: 1.2;
-    overflow: visible;
-    text-overflow: clip;
   }
 
   body[data-page="public"] .m-view-toggle {
@@ -972,19 +961,10 @@ button.loading .spinner {
     padding: 0 !important;
   }
 
-  body[data-page="public"] .m-legend {
-    display: block;
-    font-size: 11px;
-    line-height: 1.2;
-    color: var(--muted);
-    margin: 0;
-    padding: 0 2px;
-  }
-
   body[data-page="public"] .mobile-calendar {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     flex: 1;
     min-height: 0;
   }
@@ -1013,14 +993,24 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .mobile-day-header {
-    display: block;
-    padding: 2px 0 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  body[data-page="public"] .mobile-day-header .btn {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+    padding: 0;
+    font-size: 17px;
   }
 
   body[data-page="public"] .mobile-day-label {
     text-align: center;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1047,7 +1037,7 @@ button.loading .spinner {
 
   body[data-page="public"] .mobile-timeline {
     display: grid;
-    grid-template-columns: var(--m-time-col-w) minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
     gap: 6px;
     padding: 8px;
     --px-per-min-mobile: 1.05px;
@@ -1070,15 +1060,9 @@ button.loading .spinner {
   body[data-page="public"] .mobile-time-label {
     position: absolute;
     left: 0;
-    width: calc(var(--m-time-col-w) - 8px);
-    padding-right: 6px;
-    text-align: right;
     font-size: 11px;
     color: var(--muted);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    transform: translateY(-50%);
+    transform: translateY(-6px);
   }
 
   body[data-page="public"] .mobile-day-track {
@@ -1155,7 +1139,7 @@ button.loading .spinner {
     --m-week-head-h: 34px;
     --px-per-min-mobile: 1.05px;
     display: grid;
-    grid-template-columns: var(--m-time-col-w) repeat(7, minmax(126px, 1fr));
+    grid-template-columns: 56px repeat(7, minmax(124px, 1fr));
     position: relative;
     width: max-content;
     min-width: 100%;
@@ -1168,7 +1152,6 @@ button.loading .spinner {
     z-index: 4;
     padding: calc(var(--m-week-head-h) + 8px) 6px 8px;
     border-right: 1px solid var(--border);
-    box-shadow: 1px 0 0 var(--border);
   }
 
   body[data-page="public"] .m-week-time-labels {
@@ -1179,23 +1162,14 @@ button.loading .spinner {
   body[data-page="public"] .m-week-time-label {
     position: absolute;
     left: 0;
-    width: calc(var(--m-time-col-w) - 8px);
-    padding-right: 6px;
-    text-align: right;
     font-size: 11px;
     color: var(--muted);
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    transform: translateY(-50%);
+    transform: translateY(-6px);
   }
 
   body[data-page="public"] .m-week-day {
     position: relative;
-    display: grid;
-    grid-template-rows: var(--m-week-head-h) auto;
-    gap: 8px;
-    padding: 0 6px 8px;
+    padding: 8px 6px;
     border-right: 1px solid var(--border);
     background: var(--panel);
   }
@@ -1216,8 +1190,8 @@ button.loading .spinner {
     font-weight: 700;
     background: var(--panel);
     z-index: 3;
-    margin: 0;
-    padding: 8px 4px 4px;
+    margin: -8px -6px 8px;
+    padding: 8px 4px 6px;
     border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
   }
 
@@ -1251,17 +1225,21 @@ button.loading .spinner {
   }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 560px) {
   body[data-page="public"] .m-weekbar {
     grid-template-columns: 44px minmax(0, 1fr) 44px 44px;
     grid-template-areas:
-      "prev today cal next"
-      "range range range range";
-    row-gap: 6px;
+      "prev today date next"
+      "label label label label";
   }
 
+  body[data-page="public"] #m-week-prev { grid-area: prev; }
+  body[data-page="public"] #m-week-today { grid-area: today; }
+  body[data-page="public"] #m-week-date-trigger { grid-area: date; }
+  body[data-page="public"] #m-week-next { grid-area: next; }
+
   body[data-page="public"] .m-week-label {
-    grid-area: range;
+    grid-area: label;
     white-space: normal;
     line-height: 1.15;
     padding: 0 2px;
@@ -1274,7 +1252,7 @@ button.loading .spinner {
   background: var(--panel);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .calendar { display: grid; }
   .agenda { display: none; }
   .content { padding: 24px 24px 60px; }

@@ -63,7 +63,7 @@
     HALF_A: body.dataset.spaceLabelA || 'Půlka A',
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
-  const mobileMq = window.matchMedia('(max-width: 900px)');
+  const mobileMq = window.matchMedia('(max-width: 1023px)');
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
@@ -824,6 +824,8 @@
   const initMobileControls = () => {
     if (page !== 'public') return;
     const strip = document.getElementById('mobile-weekstrip');
+    const prev = document.getElementById('mobile-day-prev');
+    const next = document.getElementById('mobile-day-next');
     const todayBtn = document.getElementById('week-today');
     const spaceToggle = document.getElementById('mobile-space-toggle');
     const mPrev = document.getElementById('m-week-prev');
@@ -883,6 +885,22 @@
         const btn = e.target.closest('button[data-day-index]');
         if (!btn) return;
         mobileDayIndex = parseInt(btn.dataset.dayIndex || '0', 10);
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (prev) {
+      prev.addEventListener('click', () => {
+        mobileDayIndex = Math.max(0, mobileDayIndex - 1);
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (next) {
+      next.addEventListener('click', () => {
+        mobileDayIndex = Math.min(6, mobileDayIndex + 1);
         renderMobileWeekstrip();
         renderMobileDayView();
         renderMobileWeekGrid();
