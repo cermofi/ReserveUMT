@@ -66,7 +66,7 @@
   const mobileMq = window.matchMedia('(max-width: 900px)');
   let mobileDayIndex = 0;
   let mobileView = 'week';
-  let mobileSelectedSpace = 'HALF_A';
+  let mobileSelectedSpace = 'WHOLE';
   let mobileBookings = [];
   let mobileRecurring = [];
 
@@ -800,6 +800,27 @@
     }
   };
 
+  const enforceMobilePublicDefaults = () => {
+    if (page !== 'public' || !mobileMq.matches) return;
+    mobileView = 'week';
+    mobileSelectedSpace = 'WHOLE';
+    localStorage.setItem('mobileView', 'week');
+
+    const url = new URL(window.location.href);
+    let changed = false;
+    if (url.searchParams.get('view') !== null && url.searchParams.get('view') !== 'week') {
+      url.searchParams.set('view', 'week');
+      changed = true;
+    }
+    if (url.searchParams.get('space') !== null && url.searchParams.get('space') !== 'WHOLE') {
+      url.searchParams.set('space', 'WHOLE');
+      changed = true;
+    }
+    if (changed) {
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  };
+
   const initMobileControls = () => {
     if (page !== 'public') return;
     const strip = document.getElementById('mobile-weekstrip');
@@ -816,14 +837,21 @@
     const mBtnNew = document.getElementById('m-btn-new');
     const viewToggle = document.querySelector('.m-view-toggle');
     const viewButtons = viewToggle ? viewToggle.querySelectorAll('button[data-view]') : [];
-    const savedView = localStorage.getItem('mobileView');
-    if (savedView === 'day' || savedView === 'week') {
-      mobileView = savedView;
+    if (mobileMq.matches) {
+      enforceMobilePublicDefaults();
     } else {
-      mobileView = 'week';
+      const savedView = localStorage.getItem('mobileView');
+      if (savedView === 'day' || savedView === 'week') {
+        mobileView = savedView;
+      } else {
+        mobileView = 'week';
+      }
     }
 
     const applyView = () => {
+      if (mobileMq.matches) {
+        enforceMobilePublicDefaults();
+      }
       body.classList.toggle('mobile-view-week', mobileView === 'week');
       body.classList.toggle('mobile-view-day', mobileView === 'day');
       viewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === mobileView));
@@ -887,6 +915,7 @@
     }
     mobileMq.addEventListener('change', (e) => {
       if (e.matches) {
+        enforceMobilePublicDefaults();
         renderMobileWeekstrip();
         renderMobileDayView();
         renderMobileWeekGrid();

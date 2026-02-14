@@ -942,9 +942,9 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .m-view-toggle {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   body[data-page="public"] .m-view-toggle button,
@@ -967,9 +967,9 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .mobile-space-toggle {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   body[data-page="public"] .m-legend {
