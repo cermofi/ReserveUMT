@@ -1247,6 +1247,40 @@ button.loading .spinner {
 }
 
 @media (max-width: 520px) {
+  body[data-page="public"] #form-reserve .time-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    column-gap: 12px;
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  body[data-page="public"] #form-reserve .time-row > button[data-time-adjust] {
+    min-width: 64px;
+    width: 64px;
+    height: 48px;
+    padding: 0 8px;
+    flex-shrink: 0;
+    transform: translateZ(0);
+  }
+
+  body[data-page="public"] #form-reserve .time-row > input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    height: 48px;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  /* iOS Safari fix: time step buttons overlap */
+  @supports (-webkit-touch-callout: none) {
+    body[data-page="public"] #form-reserve .time-row > button[data-time-adjust],
+    body[data-page="public"] #form-reserve .time-row > input[type="time"] {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+  }
+
   body[data-page="public"] .m-week-track.has-half-lanes {
     background-image: linear-gradient(to bottom, rgba(100, 116, 139, 0.1) 1px, transparent 1px);
     background-size: 100% calc(var(--px-per-min-mobile) * 30);
