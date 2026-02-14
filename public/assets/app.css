@@ -829,6 +829,10 @@ button.loading .spinner {
     --px-per-min-mobile: 1.05px;
   }
 
+  body[data-page="public"].mobile-booking-modal-open {
+    overscroll-behavior: none;
+  }
+
   body[data-page="public"] .topbar,
   body[data-page="public"] .week-controls,
   body[data-page="public"] .calendar-wrap,
@@ -1298,16 +1302,18 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .m-booking-modal {
-    align-items: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
   }
 
   body[data-page="public"] .m-booking-modal .m-booking-modal-card {
-    width: min(560px, 100vw);
-    border-radius: 20px 20px 0 0;
-    padding: 16px 16px calc(16px + var(--safe-bottom));
-    max-height: 90vh;
+    width: min(92vw, 520px);
+    border-radius: 20px;
+    padding: 16px;
+    max-height: min(80vh, 720px);
     overflow: auto;
-    box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow);
   }
 
   body[data-page="public"] .m-booking-modal-name {

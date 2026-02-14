@@ -84,6 +84,7 @@
   const mobileMq = window.matchMedia('(max-width: 1023px)');
   const compactMq = window.matchMedia('(max-width: 560px)');
   const MOBILE_BOOKING_MODAL_ID = 'modal-mobile-booking';
+  const MOBILE_BOOKING_MODAL_OPEN_CLASS = 'mobile-booking-modal-open';
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
@@ -281,12 +282,18 @@
     const modal = document.getElementById(id);
     if (!modal) return;
     modal.setAttribute('aria-hidden', 'false');
+    if (id === MOBILE_BOOKING_MODAL_ID && mobileMq.matches && page === 'public') {
+      body.classList.add(MOBILE_BOOKING_MODAL_OPEN_CLASS);
+    }
   };
 
   const closeModal = (id) => {
     const modal = document.getElementById(id);
     if (!modal) return;
     modal.setAttribute('aria-hidden', 'true');
+    if (id === MOBILE_BOOKING_MODAL_ID) {
+      body.classList.remove(MOBILE_BOOKING_MODAL_OPEN_CLASS);
+    }
   };
 
   const mobileSpaceDetailLabel = (space) => {
@@ -471,6 +478,7 @@
           formResetToDefaults(document.getElementById('form-reserve'));
         }
       });
+      body.classList.remove(MOBILE_BOOKING_MODAL_OPEN_CLASS);
     }
   });
 
