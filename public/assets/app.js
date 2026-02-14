@@ -82,11 +82,91 @@
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
   const mobileMq = window.matchMedia('(max-width: 1023px)');
+  const compactMq = window.matchMedia('(max-width: 560px)');
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
   let mobileBookings = [];
   let mobileRecurring = [];
+  let currentWeekBookings = [];
+  let currentWeekRecurring = [];
+  let layoutRafId = 0;
+  let layoutObserver = null;
+  let observedLayoutNode = null;
+  let layoutRecalcRunning = false;
+  let layoutLastMode = mobileMq.matches ? 'mobile' : 'desktop';
+  let layoutLastWidth = 0;
+  let layoutLastHeight = 0;
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const applyViewportHeightVar = () => {
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+    if (viewportHeight > 0) {
+      document.documentElement.style.setProperty('--app-vh', `${viewportHeight * 0.01}px`);
+    }
+  };
+
+  const getLayoutMetrics = () => {
+    const mode = mobileMq.matches ? 'mobile' : 'desktop';
+    const host = mode === 'mobile'
+      ? (document.getElementById('m-week-grid') || document.getElementById('mobile-calendar') || document.querySelector('main.content'))
+      : (document.getElementById('calendar') || document.querySelector('.calendar-wrap') || document.querySelector('main.content'));
+    const rect = host?.getBoundingClientRect();
+    return {
+      mode,
+      hostWidth: Math.round(rect?.width || 0),
+      hostHeight: Math.round(rect?.height || 0),
+      bookingCount: currentWeekBookings.length + currentWeekRecurring.length,
+    };
+  };
+
+  const logLayoutDebug = (reason, metrics, durationMs) => {
+    if (!window.__layoutDebug) return;
+    console.info('[layout]', {
+      reason,
+      viewport: `${Math.round(window.innerWidth)}x${Math.round(window.innerHeight)}`,
+      mode: metrics.mode,
+      hostWidth: metrics.hostWidth,
+      hostHeight: metrics.hostHeight,
+      bookingCount: metrics.bookingCount,
+      slotHeight: parseFloat(getComputedStyle(body).getPropertyValue('--px-per-min-mobile') || '0') * stepMin,
+      durationMs: Math.round(durationMs * 100) / 100,
+    });
+  };
+
+  const runLayoutSelfCheck = (metrics) => {
+    const failures = [];
+    const candidates = document.querySelectorAll('.booking, .m-booking, .m-week-booking');
+    candidates.forEach((el) => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      const b = el.getBoundingClientRect();
+      const p = parent.getBoundingClientRect();
+      const overflowY = b.top < p.top - 1 || b.bottom > p.bottom + 1;
+      const overflowX = b.left < p.left - 1 || b.right > p.right + 1;
+      if (overflowX || overflowY) {
+        failures.push({
+          className: el.className,
+          overflowX,
+          overflowY,
+          deltaTop: Math.round(b.top - p.top),
+          deltaLeft: Math.round(b.left - p.left),
+          width: Math.round(b.width),
+          height: Math.round(b.height),
+        });
+      }
+    });
+    if (failures.length > 0) {
+      console.error('[layout-self-check] booking bounds out of container', {
+        mode: metrics.mode,
+        hostWidth: metrics.hostWidth,
+        hostHeight: metrics.hostHeight,
+        count: failures.length,
+        sample: failures.slice(0, 8),
+      });
+    }
+  };
 
   const toastEl = document.getElementById('toast');
     const showToast = (msg) => {
@@ -252,6 +332,19 @@
     } else {
       btn.classList.remove('loading');
       btn.disabled = false;
+    }
+  };
+
+  const updateDesktopGridMetrics = () => {
+    const calendar = document.getElementById('calendar');
+    if (!calendar) return;
+    const firstCol = calendar.querySelector('.day-col');
+    if (!firstCol) return;
+    const headerH = firstCol.querySelector('.day-header')?.getBoundingClientRect().height || 0;
+    const subH = firstCol.querySelector('.day-subheader')?.getBoundingClientRect().height || 0;
+    const gridTop = headerH + subH;
+    if (gridTop > 0) {
+      calendar.style.setProperty('--grid-top', `${gridTop}px`);
     }
   };
 
@@ -563,26 +656,7 @@
 
     calendar.appendChild(timeCol);
     calendar.appendChild(dayCols);
-
-    const updateGridTopVar = () => {
-      const firstCol = dayCols.querySelector('.day-col');
-      if (!firstCol) return;
-      const headerH = firstCol.querySelector('.day-header')?.getBoundingClientRect().height || 0;
-      const subH = firstCol.querySelector('.day-subheader')?.getBoundingClientRect().height || 0;
-      const gridTop = headerH + subH;
-      if (gridTop > 0) {
-        calendar.style.setProperty('--grid-top', `${gridTop}px`);
-      }
-    };
-
-    if (window.__umtGridTopHandler) {
-      window.removeEventListener('resize', window.__umtGridTopHandler);
-    }
-    window.__umtGridTopHandler = () => {
-      window.requestAnimationFrame(updateGridTopVar);
-    };
-    window.addEventListener('resize', window.__umtGridTopHandler);
-    updateGridTopVar();
+    updateDesktopGridMetrics();
   };
 
   const renderMobileWeekstrip = () => {
@@ -864,6 +938,94 @@
     }
   };
 
+  const resolveLayoutObserverNode = () => {
+    if (mobileMq.matches) {
+      return document.getElementById('m-week-grid') || document.getElementById('mobile-calendar') || document.querySelector('main.content');
+    }
+    return document.getElementById('calendar') || document.querySelector('.calendar-wrap') || document.querySelector('main.content');
+  };
+
+  const connectLayoutObserver = () => {
+    if (typeof ResizeObserver === 'undefined') return;
+    if (!layoutObserver) {
+      layoutObserver = new ResizeObserver(() => {
+        scheduleLayoutRecalc('resize-observer');
+      });
+    }
+    const target = resolveLayoutObserverNode();
+    if (observedLayoutNode === target) return;
+    if (observedLayoutNode) {
+      layoutObserver.unobserve(observedLayoutNode);
+    }
+    observedLayoutNode = target;
+    if (observedLayoutNode) {
+      layoutObserver.observe(observedLayoutNode);
+    }
+  };
+
+  const applyMobileLayoutVars = (metrics) => {
+    if (!mobileMq.matches) {
+      body.style.removeProperty('--m-time-col-w');
+      body.style.removeProperty('--m-day-min-w');
+      body.style.removeProperty('--px-per-min-mobile');
+      return;
+    }
+    const hostWidth = metrics.hostWidth || Math.round(window.innerWidth || 0);
+    const timeColWidth = clamp(Math.round(hostWidth * 0.13), 52, 64);
+    const dayMinWidth = clamp(Math.round((hostWidth - timeColWidth - 24) / 3), 108, 132);
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || 0;
+    const pxPerMinMobile = clamp(Math.round((viewportHeight * 0.0011) * 100) / 100, 0.95, 1.15);
+    body.style.setProperty('--m-time-col-w', `${timeColWidth}px`);
+    body.style.setProperty('--m-day-min-w', `${dayMinWidth}px`);
+    body.style.setProperty('--px-per-min-mobile', `${pxPerMinMobile}px`);
+  };
+
+  const recalcCalendarLayout = (reason = 'manual') => {
+    if (layoutRecalcRunning) return;
+    layoutRecalcRunning = true;
+    const startedAt = performance.now();
+    applyViewportHeightVar();
+    const metrics = getLayoutMetrics();
+    const modeChanged = metrics.mode !== layoutLastMode;
+    const sizeChanged = Math.abs(metrics.hostWidth - layoutLastWidth) > 1 || Math.abs(metrics.hostHeight - layoutLastHeight) > 1;
+    applyMobileLayoutVars(metrics);
+    if (modeChanged || sizeChanged) {
+      if (page === 'public' && mobileMq.matches && (currentWeekBookings.length || currentWeekRecurring.length)) {
+        renderMobileWeekGrid();
+        renderMobileDayView();
+      }
+      updateDesktopGridMetrics();
+      connectLayoutObserver();
+    }
+    runLayoutSelfCheck(metrics);
+    layoutLastMode = metrics.mode;
+    layoutLastWidth = metrics.hostWidth;
+    layoutLastHeight = metrics.hostHeight;
+    logLayoutDebug(reason, metrics, performance.now() - startedAt);
+    layoutRecalcRunning = false;
+  };
+
+  const scheduleLayoutRecalc = (reason = 'manual') => {
+    if (layoutRafId) return;
+    layoutRafId = window.requestAnimationFrame(() => {
+      layoutRafId = 0;
+      recalcCalendarLayout(reason);
+    });
+  };
+
+  const initLayoutRecalc = () => {
+    const onViewportChange = () => scheduleLayoutRecalc('viewport-change');
+    connectLayoutObserver();
+    window.addEventListener('resize', onViewportChange, { passive: true });
+    window.addEventListener('orientationchange', onViewportChange, { passive: true });
+    compactMq.addEventListener('change', () => scheduleLayoutRecalc('compact-breakpoint-change'));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onViewportChange, { passive: true });
+      window.visualViewport.addEventListener('scroll', onViewportChange, { passive: true });
+    }
+    scheduleLayoutRecalc('layout-init');
+  };
+
   const enforceMobilePublicDefaults = () => {
     if (page !== 'public' || !mobileMq.matches) return;
     mobileView = 'week';
@@ -1021,8 +1183,12 @@
       } else {
         body.classList.remove('mobile-view-week', 'mobile-view-day');
       }
+      connectLayoutObserver();
+      scheduleLayoutRecalc('breakpoint-change');
     });
     applyView();
+    connectLayoutObserver();
+    scheduleLayoutRecalc('mobile-controls-init');
 
     if (mPrev && weekPrev) mPrev.addEventListener('click', () => weekPrev.click());
     if (mNext && weekNext) mNext.addEventListener('click', () => weekNext.click());
@@ -1087,6 +1253,8 @@
     const message = '<div class="panel warning">Nepodařilo se načíst aktuální data.</div>';
     mobileBookings = [];
     mobileRecurring = [];
+    currentWeekBookings = [];
+    currentWeekRecurring = [];
 
     const calendar = document.getElementById('calendar');
     if (calendar) calendar.innerHTML = message;
@@ -1109,6 +1277,7 @@
     if (adminRules) adminRules.innerHTML = message;
     const adminAudit = document.getElementById('admin-audit');
     if (adminAudit) adminAudit.innerHTML = message;
+    scheduleLayoutRecalc('data-load-error');
   };
 
   const loadWeek = async () => {
@@ -1123,6 +1292,8 @@
           headers: { 'X-CSRF-Token': csrf },
           body: new URLSearchParams({ action: 'list_admin', csrf, from: String(from), to: String(to) })
         });
+        currentWeekBookings = Array.isArray(res.bookings) ? res.bookings : [];
+        currentWeekRecurring = Array.isArray(res.recurring) ? res.recurring : [];
         renderCalendar(res.bookings, res.recurring);
         renderAgenda(res.bookings, res.recurring);
         if (mobileMq.matches) {
@@ -1154,9 +1325,12 @@
           const inputMaxDur = document.getElementById('input-max-duration');
           if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
         }
+        scheduleLayoutRecalc('data-loaded-admin');
         return;
       }
       const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
+      currentWeekBookings = Array.isArray(res.bookings) ? res.bookings : [];
+      currentWeekRecurring = Array.isArray(res.recurring) ? res.recurring : [];
       renderCalendar(res.bookings, res.recurring);
       renderAgenda(res.bookings, res.recurring);
       if (page === 'public') {
@@ -1168,6 +1342,7 @@
           renderMobileWeekGrid();
         }
       }
+      scheduleLayoutRecalc('data-loaded-public');
     } catch (_) {
       renderDataLoadError();
       showToast('Nepodařilo se načíst aktuální data.');
@@ -1876,6 +2051,7 @@
   if (page === 'admin') {
     initAdminForms();
   }
+  initLayoutRecalc();
   loadWeek();
 
   // Copy version to clipboard on click (nice-to-have, silent fail)

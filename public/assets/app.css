@@ -22,6 +22,7 @@
   --cat-7: #64748b;
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
+  --app-vh: 1vh;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -823,6 +824,9 @@ button.loading .spinner {
 @media (max-width: 1023px) {
   body[data-page="public"] {
     overflow: hidden;
+    --m-time-col-w: 56px;
+    --m-day-min-w: 124px;
+    --px-per-min-mobile: 1.05px;
   }
 
   body[data-page="public"] .topbar,
@@ -842,8 +846,8 @@ button.loading .spinner {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    min-height: 100dvh;
-    height: 100dvh;
+    min-height: calc(var(--app-vh) * 100);
+    height: calc(var(--app-vh) * 100);
     overflow: hidden;
   }
 
@@ -1034,10 +1038,9 @@ button.loading .spinner {
 
   body[data-page="public"] .mobile-timeline {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: var(--m-time-col-w) minmax(0, 1fr);
     gap: 6px;
     padding: 8px;
-    --px-per-min-mobile: 1.05px;
     min-width: 280px;
   }
 
@@ -1134,9 +1137,8 @@ button.loading .spinner {
 
   body[data-page="public"] .m-week-grid {
     --m-week-head-h: 34px;
-    --px-per-min-mobile: 1.05px;
     display: grid;
-    grid-template-columns: 56px repeat(7, minmax(124px, 1fr));
+    grid-template-columns: var(--m-time-col-w) repeat(7, minmax(var(--m-day-min-w), 1fr));
     position: relative;
     width: max-content;
     min-width: 100%;
