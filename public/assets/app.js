@@ -77,6 +77,7 @@
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
   const mobileMq = window.matchMedia('(max-width: 1023px)');
+  const mobileHalfColumnsMq = window.matchMedia('(max-width: 520px)');
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
@@ -774,7 +775,25 @@
       track.className = 'm-week-track';
       track.style.setProperty('--total-minutes', totalMinutes);
       track.dataset.date = ymd;
+      const useHalfColumns = mobileHalfColumnsMq.matches;
+      if (useHalfColumns) {
+        track.classList.add('has-half-lanes');
+      }
       const pxPerMin = parseFloat(getComputedStyle(wrap).getPropertyValue('--px-per-min-mobile')) || 1.15;
+      let laneA = null;
+      let laneB = null;
+      if (useHalfColumns) {
+        // Mobile override: keep A/B bookings in separate lanes to prevent overlap.
+        const laneWrap = document.createElement('div');
+        laneWrap.className = 'm-week-lane-wrap';
+        laneA = document.createElement('div');
+        laneA.className = 'm-week-lane lane-a';
+        laneB = document.createElement('div');
+        laneB.className = 'm-week-lane lane-b';
+        laneWrap.appendChild(laneA);
+        laneWrap.appendChild(laneB);
+        track.appendChild(laneWrap);
+      }
 
       track.addEventListener('click', (e) => {
         const rect = track.getBoundingClientRect();
@@ -797,7 +816,13 @@
       }).forEach((b) => {
         const item = document.createElement('div');
         item.className = 'm-week-booking';
-        if (b.space === 'WHOLE') item.classList.add('whole');
+        if (b.space === 'WHOLE') {
+          item.classList.add('whole');
+        } else if (b.space === 'HALF_A') {
+          item.classList.add('half-a');
+        } else if (b.space === 'HALF_B') {
+          item.classList.add('half-b');
+        }
         const startDate = new Date(b.start_ts * 1000);
         const endDate = new Date(b.end_ts * 1000);
         const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
@@ -806,7 +831,13 @@
         item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
         const title = (b.name && b.name.trim()) ? b.name : 'Rezervace';
         item.textContent = `${title} · ${formatTime(startDate)}`;
-        track.appendChild(item);
+        if (useHalfColumns && b.space === 'HALF_A' && laneA) {
+          laneA.appendChild(item);
+        } else if (useHalfColumns && b.space === 'HALF_B' && laneB) {
+          laneB.appendChild(item);
+        } else {
+          track.appendChild(item);
+        }
       });
 
       dayCol.appendChild(track);
