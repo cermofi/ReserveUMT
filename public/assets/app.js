@@ -182,8 +182,6 @@
         setDateLimits(form.date);
         preventDateClear(form.date);
       }
-      const weekDate = document.getElementById('week-date');
-      if (weekDate) setDateLimits(weekDate);
     };
 
   const parseYmd = (ymd) => {
@@ -230,6 +228,7 @@
 
   const todayYmd = () => formatYmd(new Date());
 
+  // Booking-only limit: viewing calendar range is intentionally unrestricted.
   const maxAllowedDate = () => {
     if (maxAdvanceDays === 0) return null;
     const d = new Date();
@@ -1370,13 +1369,6 @@
       const diff = (day === 0 ? -6 : 1 - day);
       monday.setDate(monday.getDate() + diff);
       monday.setHours(0, 0, 0, 0);
-      const targetYmd = formatYmd(monday);
-      const limit = maxAllowedDate();
-      if (limit && targetYmd > limit) {
-        showToast('Nelze zobrazit týden tak daleko dopředu.');
-        syncDateInput();
-        return;
-      }
       weekStart.setTime(monday.getTime());
       loadWeek();
       syncDateInput();
@@ -1402,24 +1394,12 @@
     });
     if (next) next.addEventListener('click', () => {
       weekStart.setDate(weekStart.getDate() + 7);
-      const limit = maxAllowedDate();
-      const targetYmd = formatYmd(weekStart);
-      if (limit && targetYmd > limit) {
-        weekStart.setDate(weekStart.getDate() - 7);
-        showToast('Nelze zobrazit týden tak daleko dopředu.');
-        return;
-      }
       loadWeek();
       syncDateInput();
     });
     if (dateInput) {
       dateInput.addEventListener('change', () => jumpToDate(dateInput.value));
-      const limit = maxAllowedDate();
-      if (limit) {
-        dateInput.max = limit;
-      } else {
-        dateInput.removeAttribute('max');
-      }
+      dateInput.removeAttribute('max');
     }
     if (dateTrigger && dateInput) {
       const openPicker = () => {
