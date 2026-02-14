@@ -1016,12 +1016,9 @@ button.loading .spinner {
     text-overflow: ellipsis;
   }
 
-  body[data-page="public"]:not(.mobile-view-day) .mobile-day-header,
-  body[data-page="public"]:not(.mobile-view-day) .mobile-weekstrip {
-    display: none;
-  }
-
-  body[data-page="public"]:not(.mobile-view-day) .mobile-day-wrap {
+  body[data-page="public"] .mobile-day-header,
+  body[data-page="public"] .mobile-weekstrip,
+  body[data-page="public"] .mobile-day-wrap {
     display: none;
   }
 
