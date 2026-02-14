@@ -3,6 +3,19 @@
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
+  const clearLegacyClientCache = () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister().catch(() => false))))
+        .catch(() => {});
+    }
+    if ('caches' in window) {
+      caches.keys()
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key).catch(() => false))))
+        .catch(() => {});
+    }
+  };
+  clearLegacyClientCache();
   let maxAdvanceDays = 30;
   let maxEmailReservations = 0;
   let maxDurationHours = 2;
@@ -217,6 +230,7 @@
     if (!options.credentials) {
       options.credentials = 'same-origin';
     }
+    options.cache = 'no-store';
     const res = await fetch(url, options);
     const data = await res.json();
     if (!data.ok) {
@@ -804,7 +818,6 @@
     if (page !== 'public' || !mobileMq.matches) return;
     mobileView = 'week';
     mobileSelectedSpace = 'WHOLE';
-    localStorage.setItem('mobileView', 'week');
 
     const url = new URL(window.location.href);
     let changed = false;
@@ -842,12 +855,7 @@
     if (mobileMq.matches) {
       enforceMobilePublicDefaults();
     } else {
-      const savedView = localStorage.getItem('mobileView');
-      if (savedView === 'day' || savedView === 'week') {
-        mobileView = savedView;
-      } else {
-        mobileView = 'week';
-      }
+      mobileView = 'week';
     }
 
     const applyView = () => {
@@ -875,7 +883,6 @@
     viewButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         mobileView = btn.dataset.view || 'week';
-        localStorage.setItem('mobileView', mobileView);
         applyView();
       });
     });
@@ -1002,61 +1009,94 @@
     }
   };
 
+  const renderDataLoadError = () => {
+    const message = '<div class="panel warning">Nepodařilo se načíst aktuální data.</div>';
+    mobileBookings = [];
+    mobileRecurring = [];
+
+    const calendar = document.getElementById('calendar');
+    if (calendar) calendar.innerHTML = message;
+    const agenda = document.getElementById('agenda');
+    if (agenda) agenda.innerHTML = message;
+    const mobileWeekGrid = document.getElementById('m-week-grid');
+    if (mobileWeekGrid) {
+      mobileWeekGrid.removeAttribute('hidden');
+      mobileWeekGrid.innerHTML = message;
+    }
+    const mobileTimeline = document.getElementById('mobile-timeline');
+    if (mobileTimeline) mobileTimeline.innerHTML = message;
+    const mobileWeekStrip = document.getElementById('mobile-weekstrip');
+    if (mobileWeekStrip) mobileWeekStrip.innerHTML = '';
+    const mobileDayLabel = document.getElementById('mobile-day-label');
+    if (mobileDayLabel) mobileDayLabel.textContent = '';
+    const adminBookings = document.getElementById('admin-bookings');
+    if (adminBookings) adminBookings.innerHTML = message;
+    const adminRules = document.getElementById('admin-rules');
+    if (adminRules) adminRules.innerHTML = message;
+    const adminAudit = document.getElementById('admin-audit');
+    if (adminAudit) adminAudit.innerHTML = message;
+  };
+
   const loadWeek = async () => {
     updateWeekLabel();
     const from = Math.floor(weekStart.getTime() / 1000);
     const to = Math.floor((weekStart.getTime() + 7 * 86400000) / 1000);
     mobileDayIndex = 0;
-    if (page === 'admin') {
-      const res = await fetchJson('/admin.php', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrf },
-        body: new URLSearchParams({ action: 'list_admin', csrf, from: String(from), to: String(to) })
-      });
+    try {
+      if (page === 'admin') {
+        const res = await fetchJson('/admin.php', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': csrf },
+          body: new URLSearchParams({ action: 'list_admin', csrf, from: String(from), to: String(to) })
+        });
+        renderCalendar(res.bookings, res.recurring);
+        renderAgenda(res.bookings, res.recurring);
+        if (mobileMq.matches) {
+          mobileBookings = res.bookings;
+          mobileRecurring = res.recurring;
+          renderMobileWeekstrip();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+        }
+        renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
+        const toggle = document.getElementById('toggle-verify');
+        if (toggle) {
+          toggle.checked = String(res.require_email_verification || '1') === '1';
+        }
+        if (typeof res.max_advance_booking_days === 'number') {
+          maxAdvanceDays = res.max_advance_booking_days;
+          const inputMax = document.getElementById('input-max-advance');
+          if (inputMax) inputMax.value = String(maxAdvanceDays);
+          const formAdminBook = document.getElementById('form-admin-book');
+          if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+        }
+        if (typeof res.max_reservations_per_email === 'number') {
+          maxEmailReservations = res.max_reservations_per_email;
+          const inputMaxEmail = document.getElementById('input-max-email');
+          if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
+        }
+        if (typeof res.max_reservation_duration_hours === 'number') {
+          maxDurationHours = res.max_reservation_duration_hours;
+          const inputMaxDur = document.getElementById('input-max-duration');
+          if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
+        }
+        return;
+      }
+      const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
       renderCalendar(res.bookings, res.recurring);
       renderAgenda(res.bookings, res.recurring);
-      if (mobileMq.matches) {
+      if (page === 'public') {
         mobileBookings = res.bookings;
         mobileRecurring = res.recurring;
-        renderMobileWeekstrip();
-        renderMobileDayView();
-        renderMobileWeekGrid();
+        if (mobileMq.matches) {
+          renderMobileWeekstrip();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+        }
       }
-      renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
-      const toggle = document.getElementById('toggle-verify');
-      if (toggle) {
-        toggle.checked = String(res.require_email_verification || '1') === '1';
-      }
-      if (typeof res.max_advance_booking_days === 'number') {
-        maxAdvanceDays = res.max_advance_booking_days;
-        const inputMax = document.getElementById('input-max-advance');
-        if (inputMax) inputMax.value = String(maxAdvanceDays);
-        const formAdminBook = document.getElementById('form-admin-book');
-        if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
-      }
-      if (typeof res.max_reservations_per_email === 'number') {
-        maxEmailReservations = res.max_reservations_per_email;
-        const inputMaxEmail = document.getElementById('input-max-email');
-        if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
-      }
-      if (typeof res.max_reservation_duration_hours === 'number') {
-        maxDurationHours = res.max_reservation_duration_hours;
-        const inputMaxDur = document.getElementById('input-max-duration');
-        if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
-      }
-      return;
-    }
-    const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
-    renderCalendar(res.bookings, res.recurring);
-    renderAgenda(res.bookings, res.recurring);
-    if (page === 'public') {
-      mobileBookings = res.bookings;
-      mobileRecurring = res.recurring;
-      if (mobileMq.matches) {
-        renderMobileWeekstrip();
-        renderMobileDayView();
-        renderMobileWeekGrid();
-      }
+    } catch (_) {
+      renderDataLoadError();
+      showToast('Nepodařilo se načíst aktuální data.');
     }
   };
 

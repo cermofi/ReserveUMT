@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/security.php';
 
 send_security_headers();
+send_no_cache_headers();
 init_app_error_logging('html');
 secure_session_start();
 $csrf = csrf_token();
@@ -26,6 +27,8 @@ if (is_string($weekParam) && preg_match('/^\d{4}-\d{2}$/', $weekParam)) {
 }
 $weekStart = $baseDate->modify('monday this week')->setTime(0, 0);
 $weekLabel = $weekStart->format('o-\WW');
+$appCssVersion = (string) (@filemtime(__DIR__ . '/assets/app.css') ?: 0);
+$appJsVersion = (string) (@filemtime(__DIR__ . '/assets/app.js') ?: 0);
 ?>
 <!doctype html>
 <html lang="cs">
@@ -34,11 +37,10 @@ $weekLabel = $weekStart->format('o-\WW');
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
   <meta name="app-version" content="<?= h(app_version()) ?>" />
-  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>UMT Rozpis</title>
-  <link rel="stylesheet" href="/assets/app.css" />
+  <link rel="stylesheet" href="/assets/app.css?v=<?= h($appCssVersion) ?>" />
 </head>
 <body data-page="public" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>" data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
@@ -215,7 +217,6 @@ $weekLabel = $weekStart->format('o-\WW');
 
   <div class="toast" id="toast"></div>
 
-  <script src="/assets/pwa.js" defer></script>
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=<?= h($appJsVersion) ?>" defer></script>
 </body>
 </html>

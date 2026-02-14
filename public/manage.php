@@ -7,6 +7,7 @@ require_once __DIR__ . '/../app/security.php';
 require_once __DIR__ . '/../app/bookings.php';
 
 send_security_headers();
+send_no_cache_headers();
 init_app_error_logging('html');
 secure_session_start();
 $db = db();
@@ -60,6 +61,8 @@ if ($emailToken !== '') {
 }
 
 $tz = new DateTimeZone('Europe/Prague');
+$appCssVersion = (string) (@filemtime(__DIR__ . '/assets/app.css') ?: 0);
+$appJsVersion = (string) (@filemtime(__DIR__ . '/assets/app.js') ?: 0);
 
 function format_date(int $ts): string {
     $dt = (new DateTimeImmutable('@' . $ts))->setTimezone(new DateTimeZone('Europe/Prague'));
@@ -79,11 +82,10 @@ function format_time(int $ts): string {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
   <meta name="app-version" content="<?= h(app_version()) ?>" />
-  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>Správa rezervace</title>
-  <link rel="stylesheet" href="/assets/app.css" />
+  <link rel="stylesheet" href="/assets/app.css?v=<?= h($appCssVersion) ?>" />
 </head>
 <body data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
@@ -191,7 +193,6 @@ function format_time(int $ts): string {
       </div>
     </footer>
   </div>
-  <script src="/assets/pwa.js" defer></script>
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=<?= h($appJsVersion) ?>" defer></script>
 </body>
 </html>
