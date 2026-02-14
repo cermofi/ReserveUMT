@@ -83,11 +83,13 @@
   };
   const mobileMq = window.matchMedia('(max-width: 1023px)');
   const compactMq = window.matchMedia('(max-width: 560px)');
+  const MOBILE_BOOKING_MODAL_ID = 'modal-mobile-booking';
   let mobileDayIndex = 0;
   let mobileView = 'week';
   let mobileSelectedSpace = 'WHOLE';
   let mobileBookings = [];
   let mobileRecurring = [];
+  let mobileBookingTapStart = null;
   let currentWeekBookings = [];
   let currentWeekRecurring = [];
   let layoutRafId = 0;
@@ -285,6 +287,208 @@
     const modal = document.getElementById(id);
     if (!modal) return;
     modal.setAttribute('aria-hidden', 'true');
+  };
+
+  const mobileSpaceDetailLabel = (space) => {
+    if (space === 'HALF_A') return 'Půlka A (blíž ke vchodu)';
+    if (space === 'HALF_B') return 'Půlka B (dál od vchodu)';
+    if (space === 'WHOLE') return 'Celá UMT';
+    return spaceLabels[space] || space || 'Celá UMT';
+  };
+
+  const ensureMobileBookingModal = () => {
+    let modal = document.getElementById(MOBILE_BOOKING_MODAL_ID);
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = MOBILE_BOOKING_MODAL_ID;
+    modal.className = 'modal m-booking-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+      <div class="modal-card m-booking-modal-card" role="dialog" aria-modal="true" aria-labelledby="m-booking-modal-title">
+        <div class="modal-header">
+          <div class="modal-title" id="m-booking-modal-title">Detail rezervace</div>
+          <button class="icon-btn" type="button" data-close="${MOBILE_BOOKING_MODAL_ID}" aria-label="Zavřít">×</button>
+        </div>
+        <div class="m-booking-modal-name" data-field="name"></div>
+        <dl class="m-booking-modal-list">
+          <div class="m-booking-modal-row">
+            <dt>Datum</dt>
+            <dd data-field="date"></dd>
+          </div>
+          <div class="m-booking-modal-row">
+            <dt>Čas</dt>
+            <dd data-field="time"></dd>
+          </div>
+          <div class="m-booking-modal-row">
+            <dt>Prostor</dt>
+            <dd data-field="space"></dd>
+          </div>
+          <div class="m-booking-modal-row">
+            <dt data-field="extra-label">Poznámka / kategorie</dt>
+            <dd data-field="extra"></dd>
+          </div>
+          <div class="m-booking-modal-row" data-optional="contact" hidden>
+            <dt>Kontakt</dt>
+            <dd data-field="contact"></dd>
+          </div>
+        </dl>
+      </div>
+    `;
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal(MOBILE_BOOKING_MODAL_ID);
+      }
+    });
+    document.body.appendChild(modal);
+    return modal;
+  };
+
+  const setMobileBookingField = (modal, field, value) => {
+    const el = modal.querySelector(`[data-field="${field}"]`);
+    if (!el) return;
+    el.textContent = value;
+  };
+
+  const showMobileBookingModal = (booking) => {
+    if (!mobileMq.matches) return;
+    const modal = ensureMobileBookingModal();
+    const start = new Date(booking.start_ts * 1000);
+    const end = new Date(booking.end_ts * 1000);
+    const dateText = start.toLocaleDateString('cs-CZ', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const sameDay = formatYmd(start) === formatYmd(end);
+    const timeText = sameDay
+      ? `${formatTime(start)}–${formatTime(end)}`
+      : `${formatTime(start)} – ${end.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${formatTime(end)}`;
+    const extraValue = booking.category || booking.note || '—';
+    const extraLabel = booking.category ? 'Kategorie' : 'Poznámka';
+    setMobileBookingField(modal, 'name', booking.name || 'Rezervace');
+    setMobileBookingField(modal, 'date', dateText);
+    setMobileBookingField(modal, 'time', timeText);
+    setMobileBookingField(modal, 'space', mobileSpaceDetailLabel(booking.space));
+    setMobileBookingField(modal, 'extra', extraValue);
+    const extraLabelEl = modal.querySelector('[data-field="extra-label"]');
+    if (extraLabelEl) extraLabelEl.textContent = extraLabel;
+    const contactRow = modal.querySelector('[data-optional="contact"]');
+    if (booking.contact) {
+      setMobileBookingField(modal, 'contact', booking.contact);
+      if (contactRow) contactRow.hidden = false;
+    } else if (contactRow) {
+      contactRow.hidden = true;
+    }
+    openModal(MOBILE_BOOKING_MODAL_ID);
+  };
+
+  const hydrateMobileBookingDataset = (el, booking, fallbackTitle) => {
+    if (!el || !booking) return;
+    const title = (booking.name && String(booking.name).trim()) || fallbackTitle || 'Rezervace';
+    el.dataset.bookingId = String(booking.id ?? '');
+    el.dataset.title = title;
+    el.dataset.startTs = String(booking.start_ts ?? '');
+    el.dataset.endTs = String(booking.end_ts ?? '');
+    el.dataset.space = String(booking.space || 'WHOLE');
+    if (booking.note && String(booking.note).trim()) {
+      el.dataset.note = String(booking.note).trim();
+    } else {
+      delete el.dataset.note;
+    }
+    if (booking.category && String(booking.category).trim()) {
+      el.dataset.category = String(booking.category).trim();
+    } else {
+      delete el.dataset.category;
+    }
+    if (booking.contact && String(booking.contact).trim()) {
+      el.dataset.contact = String(booking.contact).trim();
+    } else if (booking.email && String(booking.email).trim()) {
+      el.dataset.contact = String(booking.email).trim();
+    } else {
+      delete el.dataset.contact;
+    }
+  };
+
+  const bookingFromMobileElement = (el) => {
+    if (!el) return null;
+    const startTs = Number(el.dataset.startTs || '');
+    const endTs = Number(el.dataset.endTs || '');
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs) || startTs <= 0 || endTs <= 0) {
+      return null;
+    }
+    return {
+      id: el.dataset.bookingId || '',
+      name: el.dataset.title || 'Rezervace',
+      start_ts: startTs,
+      end_ts: endTs,
+      space: el.dataset.space || 'WHOLE',
+      note: el.dataset.note || '',
+      category: el.dataset.category || '',
+      contact: el.dataset.contact || '',
+    };
+  };
+
+  const wireMobileBookingDetails = () => {
+    if (page !== 'public') return;
+    if (!mobileMq.matches) return;
+    const container = document.getElementById('mobile-calendar');
+    if (!container || container.dataset.bookingDetailWired === '1') return;
+    container.dataset.bookingDetailWired = '1';
+    const bookingSelector = '.m-booking, .m-week-booking';
+
+    container.addEventListener('pointerdown', (e) => {
+      if (!mobileMq.matches) return;
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const bookingEl = target.closest(bookingSelector);
+      if (!bookingEl) return;
+      mobileBookingTapStart = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        bookingEl,
+      };
+    }, { passive: true });
+
+    container.addEventListener('pointerup', (e) => {
+      if (!mobileMq.matches || !mobileBookingTapStart) return;
+      const target = e.target;
+      if (!(target instanceof Element)) {
+        mobileBookingTapStart = null;
+        return;
+      }
+      const bookingEl = target.closest(bookingSelector);
+      if (!bookingEl || bookingEl !== mobileBookingTapStart.bookingEl || e.pointerId !== mobileBookingTapStart.pointerId) {
+        mobileBookingTapStart = null;
+        return;
+      }
+      const movedX = Math.abs(e.clientX - mobileBookingTapStart.x);
+      const movedY = Math.abs(e.clientY - mobileBookingTapStart.y);
+      mobileBookingTapStart = null;
+      // Ignore drag-like gestures; open details only on a real tap.
+      if (movedX > 6 || movedY > 6) return;
+      const booking = bookingFromMobileElement(bookingEl);
+      if (!booking) return;
+      e.preventDefault();
+      e.stopPropagation();
+      showMobileBookingModal(booking);
+    }, true);
+
+    const clearTapState = () => {
+      mobileBookingTapStart = null;
+    };
+    container.addEventListener('pointercancel', clearTapState, { passive: true });
+    container.addEventListener('pointerleave', clearTapState, { passive: true });
+
+    container.addEventListener('click', (e) => {
+      if (!mobileMq.matches) return;
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (!target.closest(bookingSelector)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
   };
 
   document.addEventListener('click', (e) => {
@@ -782,10 +986,7 @@
       time.textContent = `${formatTime(startDate)}–${formatTime(endDate)}`;
       item.appendChild(title);
       item.appendChild(time);
-      item.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        showToast(`${title.textContent} · ${time.textContent}`);
-      });
+      hydrateMobileBookingDataset(item, b, title.textContent);
       if (b.space === 'HALF_A') {
         laneA.appendChild(item);
       } else if (b.space === 'HALF_B') {
@@ -923,6 +1124,7 @@
         } else {
           item.textContent = `${title} · ${formatTime(startDate)}`;
         }
+        hydrateMobileBookingDataset(item, b, title);
         if (useHalfColumns && b.space === 'HALF_A' && laneA) {
           laneA.appendChild(item);
         } else if (useHalfColumns && b.space === 'HALF_B' && laneB) {
@@ -1179,8 +1381,10 @@
         renderMobileWeekstrip();
         renderMobileDayView();
         renderMobileWeekGrid();
+        wireMobileBookingDetails();
       } else {
         body.classList.remove('mobile-view-week', 'mobile-view-day');
+        closeModal(MOBILE_BOOKING_MODAL_ID);
       }
       connectLayoutObserver();
       scheduleLayoutRecalc('breakpoint-change');
@@ -1197,6 +1401,7 @@
   };
 
   initMobileControls();
+  wireMobileBookingDetails();
 
   const renderAgenda = (bookings, recurring) => {
     const agenda = document.getElementById('agenda');
