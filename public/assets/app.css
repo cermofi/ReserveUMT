@@ -1282,15 +1282,47 @@ button.loading .spinner {
   }
 
   body[data-page="public"] .m-week-booking {
-    padding: 4px 5px;
-    font-size: 10px;
+    padding: 5px 6px;
     line-height: 1.15;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    justify-content: flex-start;
+    min-height: 24px;
+    overflow: hidden;
+  }
+
+  /* Keep mobile event time readable; title can be clamped when space is tight. */
+  body[data-page="public"] .m-week-booking-title {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  body[data-page="public"] .m-week-booking-time {
+    font-size: 10px;
+    line-height: 1.1;
+    color: color-mix(in srgb, var(--text) 88%, transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body[data-page="public"] .m-week-booking.is-compact {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    gap: 0;
+  }
+
+  body[data-page="public"] .m-week-booking.is-compact .m-week-booking-title {
+    display: none;
   }
 }
 .agenda-item {

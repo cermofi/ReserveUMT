@@ -830,7 +830,22 @@
         item.style.top = `calc(${minutesFromStart} * var(--px-per-min-mobile))`;
         item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
         const title = (b.name && b.name.trim()) ? b.name : 'Rezervace';
-        item.textContent = `${title} · ${formatTime(startDate)}`;
+        const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
+        if (mobileHalfColumnsMq.matches) {
+          const titleEl = document.createElement('div');
+          titleEl.className = 'm-week-booking-title';
+          titleEl.textContent = title;
+          const timeEl = document.createElement('div');
+          timeEl.className = 'm-week-booking-time';
+          timeEl.textContent = timeLabel;
+          item.appendChild(titleEl);
+          item.appendChild(timeEl);
+          if (duration <= 45) {
+            item.classList.add('is-compact');
+          }
+        } else {
+          item.textContent = `${title} · ${formatTime(startDate)}`;
+        }
         if (useHalfColumns && b.space === 'HALF_A' && laneA) {
           laneA.appendChild(item);
         } else if (useHalfColumns && b.space === 'HALF_B' && laneB) {
