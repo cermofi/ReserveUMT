@@ -819,6 +819,19 @@
     mobileView = 'week';
     mobileSelectedSpace = 'WHOLE';
 
+    const viewToggle = document.querySelector('.m-view-toggle');
+    if (viewToggle) {
+      viewToggle.querySelectorAll('button[data-view]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.view === 'week');
+      });
+    }
+    const spaceToggle = document.getElementById('mobile-space-toggle');
+    if (spaceToggle) {
+      spaceToggle.querySelectorAll('button[data-space]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.space === 'WHOLE');
+      });
+    }
+
     const url = new URL(window.location.href);
     let changed = false;
     if (url.searchParams.get('view') !== null && url.searchParams.get('view') !== 'week') {
@@ -882,6 +895,11 @@
 
     viewButtons.forEach(btn => {
       btn.addEventListener('click', () => {
+        if (mobileMq.matches) {
+          enforceMobilePublicDefaults();
+          applyView();
+          return;
+        }
         mobileView = btn.dataset.view || 'week';
         applyView();
       });
@@ -929,6 +947,12 @@
     }
     if (spaceToggle) {
       spaceToggle.addEventListener('click', (e) => {
+        if (mobileMq.matches) {
+          enforceMobilePublicDefaults();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+          return;
+        }
         const btn = e.target.closest('button[data-space]');
         if (!btn) return;
         mobileSelectedSpace = btn.dataset.space || 'HALF_A';
