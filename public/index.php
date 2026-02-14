@@ -5,6 +5,7 @@ require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/security.php';
 
 send_security_headers();
+send_no_cache_headers();
 init_app_error_logging('html');
 secure_session_start();
 $csrf = csrf_token();
@@ -26,6 +27,8 @@ if (is_string($weekParam) && preg_match('/^\d{4}-\d{2}$/', $weekParam)) {
 }
 $weekStart = $baseDate->modify('monday this week')->setTime(0, 0);
 $weekLabel = $weekStart->format('o-\WW');
+$appCssVersion = (string) (@filemtime(__DIR__ . '/assets/app.css') ?: 0);
+$appJsVersion = (string) (@filemtime(__DIR__ . '/assets/app.js') ?: 0);
 ?>
 <!doctype html>
 <html lang="cs">
@@ -34,11 +37,10 @@ $weekLabel = $weekStart->format('o-\WW');
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="csrf-token" content="<?= h($csrf) ?>" />
   <meta name="app-version" content="<?= h(app_version()) ?>" />
-  <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d10" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <title>UMT Rozpis</title>
-  <link rel="stylesheet" href="/assets/app.css" />
+  <link rel="stylesheet" href="/assets/app.css?v=<?= h($appCssVersion) ?>" />
 </head>
 <body data-page="public" data-week-start="<?= h($weekStart->format('Y-m-d')) ?>" data-week-label="<?= h($weekLabel) ?>" data-grid-start="<?= h(cfg('grid_start')) ?>" data-grid-end="<?= h(cfg('grid_end')) ?>" data-step-min="<?= h((string) cfg('grid_step_min')) ?>" data-space-label-a="<?= h((string) cfg('space_label_a')) ?>" data-space-label-b="<?= h((string) cfg('space_label_b')) ?>" data-app-version="<?= h(app_version()) ?>">
   <div class="layout">
@@ -64,10 +66,55 @@ $weekLabel = $weekStart->format('o-\WW');
         <button class="btn ghost" id="week-next">→</button>
         <input type="date" id="week-date" aria-label="Přejít na datum" autocomplete="off" class="visually-hidden" />
       </div>
+
+      <div class="m-mobile-controls">
+        <div class="m-topbar">
+          <div class="m-brand">
+            <div class="m-title">UMT Rozpis</div>
+            <div class="m-subtitle">Týdenní rozpis</div>
+          </div>
+          <div class="m-actions">
+            <button class="btn pill" id="m-btn-new" aria-label="Nová rezervace">+</button>
+            <a class="btn pill" id="m-btn-admin" href="/admin.php" aria-label="Administrace">⚙︎</a>
+          </div>
+        </div>
+
+        <div class="m-weekbar">
+          <button class="btn ghost" id="m-week-prev" aria-label="Předchozí týden">←</button>
+          <button class="btn ghost" id="m-week-today">Tento týden</button>
+          <div id="m-week-label" class="m-week-label"></div>
+          <button class="btn ghost" id="m-week-date-trigger" aria-label="Vybrat datum">📅</button>
+          <button class="btn ghost" id="m-week-next" aria-label="Další týden">→</button>
+        </div>
+
+        <div class="m-view-toggle">
+          <button type="button" data-view="week" class="active">Týden</button>
+          <button type="button" data-view="day">Den</button>
+        </div>
+
+        <div class="mobile-space-toggle" id="mobile-space-toggle">
+          <button type="button" data-space="HALF_A" class="active">A</button>
+          <button type="button" data-space="HALF_B">B</button>
+          <button type="button" data-space="WHOLE">Celá</button>
+        </div>
+      </div>
+
       <div class="legend-split">
-        <span>A = <?= h(space_label('HALF_A')) ?> (vlevo)</span>
-        <span>B = <?= h(space_label('HALF_B')) ?> (vpravo)</span>
-        <span>CELÁ = celá UMT</span>
+        <span>Půlka A = půlka blíž ke vchodu</span><br>
+        <span>Půlka B = půlka dál od vchodu</span>
+      </div>
+
+      <div id="mobile-calendar" class="mobile-calendar">
+        <div id="mobile-weekstrip" class="mobile-weekstrip"></div>
+        <div class="mobile-day-header">
+          <button class="btn ghost" type="button" id="mobile-day-prev" aria-label="Předchozí den">←</button>
+          <div class="mobile-day-label" id="mobile-day-label"></div>
+          <button class="btn ghost" type="button" id="mobile-day-next" aria-label="Další den">→</button>
+        </div>
+        <div id="m-week-grid" class="m-week-grid-wrap"></div>
+        <div class="mobile-day-wrap">
+          <div id="mobile-timeline" class="mobile-timeline"></div>
+        </div>
       </div>
 
       <div class="calendar-wrap">
@@ -170,7 +217,6 @@ $weekLabel = $weekStart->format('o-\WW');
 
   <div class="toast" id="toast"></div>
 
-  <script src="/assets/pwa.js" defer></script>
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=<?= h($appJsVersion) ?>" defer></script>
 </body>
 </html>

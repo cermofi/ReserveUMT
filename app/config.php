@@ -27,7 +27,6 @@ $CONFIG = [
     ],
 ];
 
-const CATEGORIES = ['MP', 'MD', 'SŽ', 'Žáci', 'Dorost', 'Muži', 'Soukromá'];
 const SPACES = ['WHOLE', 'HALF_A', 'HALF_B'];
 
 function app_version(): string {

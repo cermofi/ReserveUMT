@@ -11,6 +11,12 @@ function send_security_headers(): void {
     header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 }
 
+function send_no_cache_headers(): void {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 function secure_session_start(): void {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
@@ -73,6 +79,7 @@ function require_csrf(): void {
 
 function respond_json(array $data, int $status = 200): void {
     http_response_code($status);
+    send_no_cache_headers();
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;

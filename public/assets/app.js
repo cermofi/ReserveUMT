@@ -3,6 +3,19 @@
   const page = body.dataset.page || 'public';
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const appVersion = body.dataset.appVersion || '';
+  const clearLegacyClientCache = () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister().catch(() => false))))
+        .catch(() => {});
+    }
+    if ('caches' in window) {
+      caches.keys()
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key).catch(() => false))))
+        .catch(() => {});
+    }
+  };
+  clearLegacyClientCache();
   let maxAdvanceDays = 30;
   let maxEmailReservations = 0;
   let maxDurationHours = 2;
@@ -63,6 +76,13 @@
     HALF_A: body.dataset.spaceLabelA || 'Půlka A',
     HALF_B: body.dataset.spaceLabelB || 'Půlka B'
   };
+  const mobileMq = window.matchMedia('(max-width: 1023px)');
+  const mobileHalfColumnsMq = window.matchMedia('(max-width: 520px)');
+  let mobileDayIndex = 0;
+  let mobileView = 'week';
+  let mobileSelectedSpace = 'WHOLE';
+  let mobileBookings = [];
+  let mobileRecurring = [];
 
   const toastEl = document.getElementById('toast');
     const showToast = (msg) => {
@@ -98,6 +118,19 @@
     const h = String(date.getHours()).padStart(2, '0');
     const m = String(date.getMinutes()).padStart(2, '0');
     return `${h}:${m}`;
+  };
+
+  const formatDayLabel = (date) => {
+    return date.toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' });
+  };
+
+  const formatCompactDate = (date, includeYear = false) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    if (includeYear) {
+      return `${day}.${month}.${date.getFullYear()}`;
+    }
+    return `${day}.${month}.`;
   };
 
   const minutesToTime = (min) => {
@@ -159,14 +192,6 @@
   const weekStart = weekStartStr ? parseYmd(weekStartStr) : new Date();
   const totalMinutes = parseHm(gridEnd) - parseHm(gridStart);
 
-  const categoryIndex = (category) => {
-    let hash = 0;
-    for (let i = 0; i < category.length; i++) {
-      hash = (hash * 31 + category.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash) % 8;
-  };
-
   const openModal = (id) => {
     const modal = document.getElementById(id);
     if (!modal) return;
@@ -206,6 +231,7 @@
     if (!options.credentials) {
       options.credentials = 'same-origin';
     }
+    options.cache = 'no-store';
     const res = await fetch(url, options);
     const data = await res.json();
     if (!data.ok) {
@@ -290,15 +316,37 @@
       let dragMoved = false;
       let dragStartY = 0;
       let selectionEl = null;
+      let dragStartSpace = null;
+      let dragCurrentSpace = null;
 
-      const updateSelection = (clientY) => {
-        const container = selectionEl?.parentElement || track;
-        const rect = container.getBoundingClientRect();
+      const ensureSelectionElement = (space) => {
+        if (!selectionEl) {
+          selectionEl = document.createElement('div');
+          selectionEl.className = 'selection-box';
+        }
+        const desiredParent = space === 'WHOLE'
+          ? track
+          : (space === 'HALF_A' ? laneA : laneB);
+        if (selectionEl.parentElement !== desiredParent) {
+          selectionEl.remove();
+          desiredParent.appendChild(selectionEl);
+        }
+        if (space === 'WHOLE') {
+          selectionEl.classList.add('selection-whole');
+        } else {
+          selectionEl.classList.remove('selection-whole');
+        }
+        selectionEl.dataset.space = space;
+      };
+
+      const updateSelection = (clientY, selectionSpace) => {
+        const rect = track.getBoundingClientRect();
         const pxPerMin = parseFloat(getComputedStyle(track).getPropertyValue('--px-per-min')) || 1;
         const y1 = Math.max(0, Math.min(rect.height, dragStartY));
         const y2 = Math.max(0, Math.min(rect.height, clientY - rect.top));
         const top = Math.min(y1, y2);
         const height = Math.max(6, Math.abs(y2 - y1));
+        ensureSelectionElement(selectionSpace);
         if (selectionEl) {
           selectionEl.style.top = `${top}px`;
           selectionEl.style.height = `${height}px`;
@@ -314,11 +362,23 @@
         return { start, end };
       };
 
+      const getSpaceAtPoint = (clientX, clientY) => {
+        const el = document.elementFromPoint(clientX, clientY);
+        if (!el) return null;
+        const laneEl = el.closest('.day-lane');
+        if (!laneEl) return null;
+        const dayEl = laneEl.closest('.day-col');
+        if (dayEl !== col) return null; // only same day
+        if (laneEl.classList.contains('lane-a')) return 'HALF_A';
+        if (laneEl.classList.contains('lane-b')) return 'HALF_B';
+        return null;
+      };
+
       const endDrag = (clientY) => {
         if (!dragActive) return;
         dragActive = false;
-        const laneSpace = selectionEl?.dataset?.space || null;
-        const result = updateSelection(clientY);
+        const laneSpace = selectionEl?.dataset?.space || dragCurrentSpace || dragStartSpace || null;
+        const result = updateSelection(clientY, laneSpace || dragStartSpace || 'HALF_A');
         if (selectionEl) {
           selectionEl.remove();
           selectionEl = null;
@@ -345,12 +405,11 @@
           e.preventDefault();
           dragActive = true;
           dragMoved = false;
-          dragStartY = e.clientY - lane.getBoundingClientRect().top;
-          selectionEl = document.createElement('div');
-          selectionEl.className = 'selection-box';
-          lane.appendChild(selectionEl);
-          updateSelection(e.clientY);
-          selectionEl.dataset.space = laneSpace;
+          dragStartY = e.clientY - track.getBoundingClientRect().top;
+          dragStartSpace = laneSpace;
+          dragCurrentSpace = laneSpace;
+          ensureSelectionElement(laneSpace);
+          updateSelection(e.clientY, laneSpace);
         });
 
         lane.addEventListener('click', (e) => {
@@ -373,18 +432,41 @@
       attachLaneHandlers(laneA, 'HALF_A');
       attachLaneHandlers(laneB, 'HALF_B');
 
-      window.addEventListener('mousemove', (e) => {
+      const handleMove = (e) => {
         if (!dragActive) return;
-        const rect = selectionEl?.parentElement?.getBoundingClientRect();
+        const rect = track.getBoundingClientRect();
         if (rect && Math.abs(e.clientY - (rect.top + dragStartY)) > 4) {
           dragMoved = true;
         }
-        updateSelection(e.clientY);
-      });
+        const currentSpace = getSpaceAtPoint(e.clientX, e.clientY);
+        let selectionSpace = dragStartSpace;
+        if (currentSpace) {
+          selectionSpace = currentSpace !== dragStartSpace ? 'WHOLE' : dragStartSpace;
+        } else if (dragCurrentSpace) {
+          selectionSpace = dragCurrentSpace;
+        }
+        dragCurrentSpace = selectionSpace;
+        updateSelection(e.clientY, selectionSpace);
+      };
 
-      window.addEventListener('mouseup', (e) => {
+      const handleUp = (e) => {
         if (!dragActive) return;
         endDrag(e.clientY);
+      };
+
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleUp);
+      document.addEventListener('keydown', (e) => {
+        if (!dragActive) return;
+        if (e.key === 'Escape') {
+          dragActive = false;
+          dragMoved = false;
+          if (selectionEl) {
+            selectionEl.remove();
+            selectionEl = null;
+          }
+          selectionTooltip.style.display = 'none';
+        }
       });
 
       all.filter(b => {
@@ -405,8 +487,7 @@
         }
         item.style.top = `calc(${minutesFromStart} * var(--px-per-min))`;
         item.style.height = `calc(${duration} * var(--px-per-min))`;
-        const idx = categoryIndex(b.category || '');
-        item.classList.add(`cat-${idx}`);
+        item.classList.add('cat-0');
         const displayName = (b.name && b.name.trim()) ? b.name : 'Rezervace';
         const head = document.createElement('div');
         head.className = 'booking-head';
@@ -478,7 +559,475 @@
 
     calendar.appendChild(timeCol);
     calendar.appendChild(dayCols);
+
+    const updateGridTopVar = () => {
+      const firstCol = dayCols.querySelector('.day-col');
+      if (!firstCol) return;
+      const headerH = firstCol.querySelector('.day-header')?.getBoundingClientRect().height || 0;
+      const subH = firstCol.querySelector('.day-subheader')?.getBoundingClientRect().height || 0;
+      const gridTop = headerH + subH;
+      if (gridTop > 0) {
+        calendar.style.setProperty('--grid-top', `${gridTop}px`);
+      }
+    };
+
+    if (window.__umtGridTopHandler) {
+      window.removeEventListener('resize', window.__umtGridTopHandler);
+    }
+    window.__umtGridTopHandler = () => {
+      window.requestAnimationFrame(updateGridTopVar);
+    };
+    window.addEventListener('resize', window.__umtGridTopHandler);
+    updateGridTopVar();
   };
+
+  const renderMobileWeekstrip = () => {
+    if (page !== 'public') return;
+    if (mobileView !== 'day') return;
+    const strip = document.getElementById('mobile-weekstrip');
+    if (!strip) return;
+    strip.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = d.toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric' });
+      if (i === mobileDayIndex) btn.classList.add('active');
+      btn.dataset.dayIndex = String(i);
+      strip.appendChild(btn);
+    }
+  };
+
+  const renderMobileDayView = () => {
+    if (page !== 'public') return;
+    const wrapper = document.getElementById('mobile-calendar');
+    const timeline = document.getElementById('mobile-timeline');
+    const label = document.getElementById('mobile-day-label');
+    if (!wrapper || !timeline || !label) return;
+    if (!mobileMq.matches) return;
+    if (mobileView !== 'day') {
+      const dayWrap = wrapper.querySelector('.mobile-day-wrap');
+      if (dayWrap) dayWrap.setAttribute('hidden', 'true');
+      return;
+    }
+    const dayWrap = wrapper.querySelector('.mobile-day-wrap');
+    if (dayWrap) dayWrap.removeAttribute('hidden');
+
+    const selectedDate = new Date(weekStart);
+    selectedDate.setDate(weekStart.getDate() + mobileDayIndex);
+    const ymd = formatYmd(selectedDate);
+    label.textContent = formatDayLabel(selectedDate);
+
+    const startMin = parseHm(gridStart);
+    const endMin = parseHm(gridEnd);
+    const totalMinutes = endMin - startMin;
+    timeline.style.setProperty('--total-minutes', totalMinutes);
+    timeline.innerHTML = '';
+
+    const timeCol = document.createElement('div');
+    timeCol.className = 'mobile-time-col';
+    const timeLabels = document.createElement('div');
+    timeLabels.className = 'mobile-time-labels';
+    timeLabels.style.setProperty('--total-minutes', totalMinutes);
+    for (let m = startMin; m <= endMin; m += 60) {
+      const labelEl = document.createElement('div');
+      labelEl.className = 'mobile-time-label';
+      const h = String(Math.floor(m / 60)).padStart(2, '0');
+      labelEl.textContent = `${h}:00`;
+      labelEl.style.top = `calc(${m - startMin} * var(--px-per-min-mobile))`;
+      timeLabels.appendChild(labelEl);
+    }
+    timeCol.appendChild(timeLabels);
+
+    const dayCol = document.createElement('div');
+    dayCol.className = 'mobile-day-track';
+    dayCol.style.setProperty('--total-minutes', totalMinutes);
+
+    const laneWrap = document.createElement('div');
+    laneWrap.className = 'mobile-lane-wrap';
+    const laneA = document.createElement('div');
+    laneA.className = 'mobile-lane lane-a';
+    const laneB = document.createElement('div');
+    laneB.className = 'mobile-lane lane-b';
+    laneWrap.appendChild(laneA);
+    laneWrap.appendChild(laneB);
+    dayCol.appendChild(laneWrap);
+    dayCol.dataset.date = ymd;
+
+    const pxPerMin = parseFloat(getComputedStyle(timeline).getPropertyValue('--px-per-min-mobile')) || 1.15;
+
+    const openQuickCreate = (event, laneSpace) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const offset = event.clientY - rect.top;
+      const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
+      const start = startMin + minutes;
+      const end = start + stepMin;
+      if (!isWithinMaxLimit(ymd)) {
+        showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+        return;
+      }
+      openReservationModal(ymd, start, end, laneSpace);
+    };
+
+    laneA.addEventListener('click', (e) => {
+      if (mobileSelectedSpace === 'WHOLE') return;
+      openQuickCreate(e, 'HALF_A');
+    });
+    laneB.addEventListener('click', (e) => {
+      if (mobileSelectedSpace === 'WHOLE') return;
+      openQuickCreate(e, 'HALF_B');
+    });
+    laneWrap.addEventListener('click', (e) => {
+      if (mobileSelectedSpace !== 'WHOLE') return;
+      openQuickCreate(e, 'WHOLE');
+    });
+
+    const all = [...mobileBookings, ...mobileRecurring];
+    all.filter(b => {
+      const d = new Date(b.start_ts * 1000);
+      return formatYmd(d) === ymd;
+    }).forEach((b) => {
+      const item = document.createElement('div');
+      item.className = 'm-booking';
+      if (b.space === 'WHOLE') item.classList.add('whole');
+      const startDate = new Date(b.start_ts * 1000);
+      const endDate = new Date(b.end_ts * 1000);
+      const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
+      const duration = (endDate - startDate) / 60000;
+      item.style.top = `calc(${minutesFromStart} * var(--px-per-min-mobile))`;
+      item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
+      const title = document.createElement('div');
+      title.className = 'm-booking-title';
+      title.textContent = (b.name && b.name.trim()) ? b.name : 'Rezervace';
+      const time = document.createElement('div');
+      time.className = 'm-booking-time';
+      time.textContent = `${formatTime(startDate)}–${formatTime(endDate)}`;
+      item.appendChild(title);
+      item.appendChild(time);
+      item.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        showToast(`${title.textContent} · ${time.textContent}`);
+      });
+      if (b.space === 'HALF_A') {
+        laneA.appendChild(item);
+      } else if (b.space === 'HALF_B') {
+        laneB.appendChild(item);
+      } else {
+        dayCol.appendChild(item);
+      }
+    });
+
+    timeline.appendChild(timeCol);
+    timeline.appendChild(dayCol);
+  };
+
+  const renderMobileWeekGrid = () => {
+    if (page !== 'public') return;
+    const wrapOuter = document.getElementById('m-week-grid');
+    if (!wrapOuter || !mobileMq.matches) return;
+    if (mobileView !== 'week') {
+      wrapOuter.innerHTML = '';
+      wrapOuter.setAttribute('hidden', 'true');
+      return;
+    }
+    wrapOuter.removeAttribute('hidden');
+    wrapOuter.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'm-week-grid';
+    wrapOuter.appendChild(wrap);
+
+    const startMin = parseHm(gridStart);
+    const endMin = parseHm(gridEnd);
+    const totalMinutes = endMin - startMin;
+    wrap.style.setProperty('--total-minutes', totalMinutes);
+
+    const timeCol = document.createElement('div');
+    timeCol.className = 'm-week-time';
+    const labels = document.createElement('div');
+    labels.className = 'm-week-time-labels';
+    labels.style.setProperty('--total-minutes', totalMinutes);
+    for (let m = startMin; m <= endMin; m += 60) {
+      const l = document.createElement('div');
+      l.className = 'm-week-time-label';
+      const h = String(Math.floor(m / 60)).padStart(2, '0');
+      l.textContent = `${h}:00`;
+      l.style.top = `calc(${m - startMin} * var(--px-per-min-mobile))`;
+      labels.appendChild(l);
+    }
+    timeCol.appendChild(labels);
+    wrap.appendChild(timeCol);
+
+    const all = [...mobileBookings, ...mobileRecurring];
+
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + i);
+      const ymd = formatYmd(dayDate);
+      const dayCol = document.createElement('div');
+      dayCol.className = 'm-week-day';
+      const head = document.createElement('div');
+      head.className = 'm-week-day-header';
+      head.textContent = dayDate.toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' });
+      dayCol.appendChild(head);
+
+      const track = document.createElement('div');
+      track.className = 'm-week-track';
+      track.style.setProperty('--total-minutes', totalMinutes);
+      track.dataset.date = ymd;
+      const useHalfColumns = mobileHalfColumnsMq.matches;
+      if (useHalfColumns) {
+        track.classList.add('has-half-lanes');
+      }
+      const pxPerMin = parseFloat(getComputedStyle(wrap).getPropertyValue('--px-per-min-mobile')) || 1.15;
+      let laneA = null;
+      let laneB = null;
+      if (useHalfColumns) {
+        // Mobile override: keep A/B bookings in separate lanes to prevent overlap.
+        const laneWrap = document.createElement('div');
+        laneWrap.className = 'm-week-lane-wrap';
+        laneA = document.createElement('div');
+        laneA.className = 'm-week-lane lane-a';
+        laneB = document.createElement('div');
+        laneB.className = 'm-week-lane lane-b';
+        laneWrap.appendChild(laneA);
+        laneWrap.appendChild(laneB);
+        track.appendChild(laneWrap);
+      }
+
+      track.addEventListener('click', (e) => {
+        const rect = track.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        const minutes = Math.max(0, Math.min(totalMinutes - stepMin, Math.round(offset / pxPerMin / stepMin) * stepMin));
+        const start = startMin + minutes;
+        const end = start + stepMin;
+        if (!isWithinMaxLimit(ymd)) {
+          showToast('Rezervace nelze vytvářet tak daleko dopředu.');
+          return;
+        }
+        openReservationModal(ymd, start, end, mobileSelectedSpace);
+      });
+
+      all.filter(b => {
+        const d = new Date(b.start_ts * 1000);
+        if (formatYmd(d) !== ymd) return false;
+        if (mobileSelectedSpace === 'WHOLE') return true;
+        return b.space === mobileSelectedSpace;
+      }).forEach((b) => {
+        const item = document.createElement('div');
+        item.className = 'm-week-booking';
+        if (b.space === 'WHOLE') {
+          item.classList.add('whole');
+        } else if (b.space === 'HALF_A') {
+          item.classList.add('half-a');
+        } else if (b.space === 'HALF_B') {
+          item.classList.add('half-b');
+        }
+        const startDate = new Date(b.start_ts * 1000);
+        const endDate = new Date(b.end_ts * 1000);
+        const minutesFromStart = (startDate.getHours() * 60 + startDate.getMinutes()) - startMin;
+        const duration = (endDate - startDate) / 60000;
+        item.style.top = `calc(${minutesFromStart} * var(--px-per-min-mobile))`;
+        item.style.height = `calc(${duration} * var(--px-per-min-mobile))`;
+        const title = (b.name && b.name.trim()) ? b.name : 'Rezervace';
+        const timeLabel = `${formatTime(startDate)}–${formatTime(endDate)}`;
+        if (mobileHalfColumnsMq.matches) {
+          const titleEl = document.createElement('div');
+          titleEl.className = 'm-week-booking-title';
+          titleEl.textContent = title;
+          const timeEl = document.createElement('div');
+          timeEl.className = 'm-week-booking-time';
+          timeEl.textContent = timeLabel;
+          item.appendChild(titleEl);
+          item.appendChild(timeEl);
+          if (duration <= 45) {
+            item.classList.add('is-compact');
+          }
+        } else {
+          item.textContent = `${title} · ${formatTime(startDate)}`;
+        }
+        if (useHalfColumns && b.space === 'HALF_A' && laneA) {
+          laneA.appendChild(item);
+        } else if (useHalfColumns && b.space === 'HALF_B' && laneB) {
+          laneB.appendChild(item);
+        } else {
+          track.appendChild(item);
+        }
+      });
+
+      dayCol.appendChild(track);
+      wrap.appendChild(dayCol);
+    }
+  };
+
+  const enforceMobilePublicDefaults = () => {
+    if (page !== 'public' || !mobileMq.matches) return;
+    mobileView = 'week';
+    mobileSelectedSpace = 'WHOLE';
+
+    const viewToggle = document.querySelector('.m-view-toggle');
+    if (viewToggle) {
+      viewToggle.querySelectorAll('button[data-view]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.view === 'week');
+      });
+    }
+    const spaceToggle = document.getElementById('mobile-space-toggle');
+    if (spaceToggle) {
+      spaceToggle.querySelectorAll('button[data-space]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.space === 'WHOLE');
+      });
+    }
+
+    const url = new URL(window.location.href);
+    let changed = false;
+    if (url.searchParams.get('view') !== null && url.searchParams.get('view') !== 'week') {
+      url.searchParams.set('view', 'week');
+      changed = true;
+    }
+    if (url.searchParams.get('space') !== null && url.searchParams.get('space') !== 'WHOLE') {
+      url.searchParams.set('space', 'WHOLE');
+      changed = true;
+    }
+    if (changed) {
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  };
+
+  const initMobileControls = () => {
+    if (page !== 'public') return;
+    const strip = document.getElementById('mobile-weekstrip');
+    const prev = document.getElementById('mobile-day-prev');
+    const next = document.getElementById('mobile-day-next');
+    const todayBtn = document.getElementById('week-today');
+    const spaceToggle = document.getElementById('mobile-space-toggle');
+    const mPrev = document.getElementById('m-week-prev');
+    const mNext = document.getElementById('m-week-next');
+    const mToday = document.getElementById('m-week-today');
+    const mDateTrigger = document.getElementById('m-week-date-trigger');
+    const weekPrev = document.getElementById('week-prev');
+    const weekNext = document.getElementById('week-next');
+    const weekDateTrigger = document.getElementById('week-date-trigger');
+    const btnNew = document.getElementById('btn-new');
+    const mBtnNew = document.getElementById('m-btn-new');
+    const viewToggle = document.querySelector('.m-view-toggle');
+    const viewButtons = viewToggle ? viewToggle.querySelectorAll('button[data-view]') : [];
+    if (mobileMq.matches) {
+      enforceMobilePublicDefaults();
+    } else {
+      mobileView = 'week';
+    }
+
+    const applyView = () => {
+      if (mobileMq.matches) {
+        enforceMobilePublicDefaults();
+      }
+      body.classList.toggle('mobile-view-week', mobileView === 'week');
+      body.classList.toggle('mobile-view-day', mobileView === 'day');
+      viewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === mobileView));
+      if (mobileView === 'week') {
+        renderMobileWeekGrid();
+        renderMobileDayView();
+        const stripEl = document.getElementById('mobile-weekstrip');
+        if (stripEl) stripEl.setAttribute('hidden', 'true');
+      } else {
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        const wrapOuter = document.getElementById('m-week-grid');
+        if (wrapOuter) wrapOuter.setAttribute('hidden', 'true');
+        const stripEl = document.getElementById('mobile-weekstrip');
+        if (stripEl) stripEl.removeAttribute('hidden');
+      }
+    };
+
+    viewButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (mobileMq.matches) {
+          enforceMobilePublicDefaults();
+          applyView();
+          return;
+        }
+        mobileView = btn.dataset.view || 'week';
+        applyView();
+      });
+    });
+
+    if (strip) {
+      strip.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-day-index]');
+        if (!btn) return;
+        mobileDayIndex = parseInt(btn.dataset.dayIndex || '0', 10);
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (prev) {
+      prev.addEventListener('click', () => {
+        mobileDayIndex = Math.max(0, mobileDayIndex - 1);
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (next) {
+      next.addEventListener('click', () => {
+        mobileDayIndex = Math.min(6, mobileDayIndex + 1);
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (todayBtn) {
+      todayBtn.addEventListener('click', () => {
+        const now = new Date();
+        const monday = new Date(now);
+        const day = monday.getDay();
+        const diff = (day === 0 ? -6 : 1 - day);
+        monday.setDate(monday.getDate() + diff);
+        monday.setHours(0, 0, 0, 0);
+        mobileDayIndex = Math.min(6, Math.max(0, Math.round((now - monday) / 86400000)));
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    if (spaceToggle) {
+      spaceToggle.addEventListener('click', (e) => {
+        if (mobileMq.matches) {
+          enforceMobilePublicDefaults();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+          return;
+        }
+        const btn = e.target.closest('button[data-space]');
+        if (!btn) return;
+        mobileSelectedSpace = btn.dataset.space || 'HALF_A';
+        spaceToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      });
+    }
+    mobileMq.addEventListener('change', (e) => {
+      if (e.matches) {
+        enforceMobilePublicDefaults();
+        renderMobileWeekstrip();
+        renderMobileDayView();
+        renderMobileWeekGrid();
+      } else {
+        body.classList.remove('mobile-view-week', 'mobile-view-day');
+      }
+    });
+    applyView();
+
+    if (mPrev && weekPrev) mPrev.addEventListener('click', () => weekPrev.click());
+    if (mNext && weekNext) mNext.addEventListener('click', () => weekNext.click());
+    if (mToday && todayBtn) mToday.addEventListener('click', () => todayBtn.click());
+    if (mDateTrigger && weekDateTrigger) mDateTrigger.addEventListener('click', () => weekDateTrigger.click());
+    if (mBtnNew && btnNew) mBtnNew.addEventListener('click', () => btnNew.click());
+  };
+
+  initMobileControls();
 
   const renderAgenda = (bookings, recurring) => {
     const agenda = document.getElementById('agenda');
@@ -518,48 +1067,107 @@
     if (!label) return;
     const end = new Date(weekStart);
     end.setDate(weekStart.getDate() + 6);
-    label.textContent = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    const desktopLabel = `${weekStart.toLocaleDateString('cs-CZ')} – ${end.toLocaleDateString('cs-CZ')}`;
+    label.textContent = desktopLabel;
+    const mLabel = document.getElementById('m-week-label');
+    if (mLabel) {
+      const sameYear = weekStart.getFullYear() === end.getFullYear();
+      const startCompact = formatCompactDate(weekStart, !sameYear);
+      const endCompact = formatCompactDate(end, true);
+      mLabel.textContent = `${startCompact}–${endCompact}`;
+      mLabel.title = desktopLabel;
+    }
+  };
+
+  const renderDataLoadError = () => {
+    const message = '<div class="panel warning">Nepodařilo se načíst aktuální data.</div>';
+    mobileBookings = [];
+    mobileRecurring = [];
+
+    const calendar = document.getElementById('calendar');
+    if (calendar) calendar.innerHTML = message;
+    const agenda = document.getElementById('agenda');
+    if (agenda) agenda.innerHTML = message;
+    const mobileWeekGrid = document.getElementById('m-week-grid');
+    if (mobileWeekGrid) {
+      mobileWeekGrid.removeAttribute('hidden');
+      mobileWeekGrid.innerHTML = message;
+    }
+    const mobileTimeline = document.getElementById('mobile-timeline');
+    if (mobileTimeline) mobileTimeline.innerHTML = message;
+    const mobileWeekStrip = document.getElementById('mobile-weekstrip');
+    if (mobileWeekStrip) mobileWeekStrip.innerHTML = '';
+    const mobileDayLabel = document.getElementById('mobile-day-label');
+    if (mobileDayLabel) mobileDayLabel.textContent = '';
+    const adminBookings = document.getElementById('admin-bookings');
+    if (adminBookings) adminBookings.innerHTML = message;
+    const adminRules = document.getElementById('admin-rules');
+    if (adminRules) adminRules.innerHTML = message;
+    const adminAudit = document.getElementById('admin-audit');
+    if (adminAudit) adminAudit.innerHTML = message;
   };
 
   const loadWeek = async () => {
     updateWeekLabel();
     const from = Math.floor(weekStart.getTime() / 1000);
     const to = Math.floor((weekStart.getTime() + 7 * 86400000) / 1000);
-    if (page === 'admin') {
-      const res = await fetchJson('/admin.php', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrf },
-        body: new URLSearchParams({ action: 'list_admin', csrf, from: String(from), to: String(to) })
-      });
+    mobileDayIndex = 0;
+    try {
+      if (page === 'admin') {
+        const res = await fetchJson('/admin.php', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': csrf },
+          body: new URLSearchParams({ action: 'list_admin', csrf, from: String(from), to: String(to) })
+        });
+        renderCalendar(res.bookings, res.recurring);
+        renderAgenda(res.bookings, res.recurring);
+        if (mobileMq.matches) {
+          mobileBookings = res.bookings;
+          mobileRecurring = res.recurring;
+          renderMobileWeekstrip();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+        }
+        renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
+        const toggle = document.getElementById('toggle-verify');
+        if (toggle) {
+          toggle.checked = String(res.require_email_verification || '1') === '1';
+        }
+        if (typeof res.max_advance_booking_days === 'number') {
+          maxAdvanceDays = res.max_advance_booking_days;
+          const inputMax = document.getElementById('input-max-advance');
+          if (inputMax) inputMax.value = String(maxAdvanceDays);
+          const formAdminBook = document.getElementById('form-admin-book');
+          if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
+        }
+        if (typeof res.max_reservations_per_email === 'number') {
+          maxEmailReservations = res.max_reservations_per_email;
+          const inputMaxEmail = document.getElementById('input-max-email');
+          if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
+        }
+        if (typeof res.max_reservation_duration_hours === 'number') {
+          maxDurationHours = res.max_reservation_duration_hours;
+          const inputMaxDur = document.getElementById('input-max-duration');
+          if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
+        }
+        return;
+      }
+      const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
       renderCalendar(res.bookings, res.recurring);
       renderAgenda(res.bookings, res.recurring);
-      renderAdminTables(res.bookings, res.recurring, res.rules, res.audit);
-      const toggle = document.getElementById('toggle-verify');
-      if (toggle) {
-        toggle.checked = String(res.require_email_verification || '1') === '1';
+      if (page === 'public') {
+        mobileBookings = res.bookings;
+        mobileRecurring = res.recurring;
+        if (mobileMq.matches) {
+          renderMobileWeekstrip();
+          renderMobileDayView();
+          renderMobileWeekGrid();
+        }
       }
-      if (typeof res.max_advance_booking_days === 'number') {
-        maxAdvanceDays = res.max_advance_booking_days;
-        const inputMax = document.getElementById('input-max-advance');
-        if (inputMax) inputMax.value = String(maxAdvanceDays);
-        const formAdminBook = document.getElementById('form-admin-book');
-        if (formAdminBook && formAdminBook.date) setDateLimits(formAdminBook.date, { setMin: true });
-      }
-      if (typeof res.max_reservations_per_email === 'number') {
-        maxEmailReservations = res.max_reservations_per_email;
-        const inputMaxEmail = document.getElementById('input-max-email');
-        if (inputMaxEmail) inputMaxEmail.value = String(maxEmailReservations);
-      }
-      if (typeof res.max_reservation_duration_hours === 'number') {
-        maxDurationHours = res.max_reservation_duration_hours;
-        const inputMaxDur = document.getElementById('input-max-duration');
-        if (inputMaxDur) inputMaxDur.value = String(maxDurationHours);
-      }
-      return;
+    } catch (_) {
+      renderDataLoadError();
+      showToast('Nepodařilo se načíst aktuální data.');
     }
-    const res = await fetchJson(`/api.php?action=list&from=${from}&to=${to}`);
-    renderCalendar(res.bookings, res.recurring);
-    renderAgenda(res.bookings, res.recurring);
   };
 
   const wireWeekButtons = () => {
@@ -699,7 +1307,6 @@
     form.end.value = formatTime(end);
     form.name.value = booking.name || '';
     if (form.email) form.email.value = booking.email || '';
-    form.category.value = booking.category || 'Jiné';
     form.space.value = booking.space || 'WHOLE';
     if (form.note) form.note.value = booking.note || '';
     if (form.date) setDateLimits(form.date, { setMin: false });
@@ -927,7 +1534,7 @@
         const end = new Date(b.end_ts * 1000);
         row.innerHTML = `
           <div>
-            <div><strong>${b.name}</strong> (${b.category})</div>
+            <div><strong>${b.name}</strong></div>
             <div class="meta">${start.toLocaleDateString('cs-CZ')} ${formatTime(start)}–${formatTime(end)} · ${spaceLabels[b.space] || b.space}</div>
           </div>
         `;
@@ -961,7 +1568,7 @@
         row.className = 'table-row';
         row.innerHTML = `
           <div>
-            <div><strong>${r.title}</strong> (${r.category})</div>
+            <div><strong>${r.title}</strong></div>
             <div class="meta">${r.dow}. den · ${spaceLabels[r.space] || r.space} · ${minutesToTime(r.start_min)}–${minutesToTime(r.end_min)}</div>
           </div>
         `;

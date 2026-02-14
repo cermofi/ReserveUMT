@@ -32,6 +32,68 @@ function add_column_if_missing(PDO $db, string $table, string $column, string $d
     }
 }
 
+function drop_category_from_bookings(PDO $db): void {
+    if (!column_exists($db, 'bookings', 'category')) return;
+    $db->exec("CREATE TABLE bookings_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        start_ts INTEGER NOT NULL,
+        end_ts INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
+        note TEXT NOT NULL DEFAULT '',
+        created_ts INTEGER NOT NULL,
+        created_ip TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'CONFIRMED',
+        edit_token TEXT
+    )");
+    $db->exec("INSERT INTO bookings_new (id,start_ts,end_ts,name,email,space,note,created_ts,created_ip,status,edit_token)
+               SELECT id,start_ts,end_ts,name,email,space,note,created_ts,created_ip,status,edit_token FROM bookings");
+    $db->exec("DROP TABLE bookings");
+    $db->exec("ALTER TABLE bookings_new RENAME TO bookings");
+}
+
+function drop_category_from_pending(PDO $db): void {
+    if (!column_exists($db, 'pending_bookings', 'category')) return;
+    $db->exec("CREATE TABLE pending_bookings_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        start_ts INTEGER,
+        end_ts INTEGER,
+        name TEXT,
+        email TEXT,
+        space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
+        note TEXT NOT NULL DEFAULT '',
+        code_hash TEXT NOT NULL,
+        code_expires_ts INTEGER NOT NULL,
+        created_ts INTEGER NOT NULL,
+        created_ip TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0
+    )");
+    $db->exec("INSERT INTO pending_bookings_new (id,start_ts,end_ts,name,email,space,note,code_hash,code_expires_ts,created_ts,created_ip,attempts)
+               SELECT id,start_ts,end_ts,name,email,space,note,code_hash,code_expires_ts,created_ts,created_ip,attempts FROM pending_bookings");
+    $db->exec("DROP TABLE pending_bookings");
+    $db->exec("ALTER TABLE pending_bookings_new RENAME TO pending_bookings");
+}
+
+function drop_category_from_recurring(PDO $db): void {
+    if (!column_exists($db, 'recurring_rules', 'category')) return;
+    $db->exec("CREATE TABLE recurring_rules_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
+        dow INTEGER NOT NULL,
+        start_min INTEGER NOT NULL,
+        end_min INTEGER NOT NULL,
+        start_date INTEGER NOT NULL,
+        end_date INTEGER NOT NULL,
+        created_ts INTEGER NOT NULL
+    )");
+    $db->exec("INSERT INTO recurring_rules_new (id,title,space,dow,start_min,end_min,start_date,end_date,created_ts)
+               SELECT id,title,space,dow,start_min,end_min,start_date,end_date,created_ts FROM recurring_rules");
+    $db->exec("DROP TABLE recurring_rules");
+    $db->exec("ALTER TABLE recurring_rules_new RENAME TO recurring_rules");
+}
+
 function migrate(PDO $db): void {
     $db->exec("CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,12 +101,12 @@ function migrate(PDO $db): void {
         end_ts INTEGER NOT NULL,
         name TEXT NOT NULL,
         email TEXT NOT NULL,
-        category TEXT NOT NULL,
         space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
         note TEXT NOT NULL DEFAULT '',
         created_ts INTEGER NOT NULL,
         created_ip TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'CONFIRMED'
+        status TEXT NOT NULL DEFAULT 'CONFIRMED',
+        edit_token TEXT
     )");
 
     $db->exec("CREATE TABLE IF NOT EXISTS pending_bookings (
@@ -53,7 +115,6 @@ function migrate(PDO $db): void {
         end_ts INTEGER,
         name TEXT,
         email TEXT,
-        category TEXT,
         space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
         note TEXT NOT NULL DEFAULT '',
         code_hash TEXT NOT NULL,
@@ -66,7 +127,6 @@ function migrate(PDO $db): void {
     $db->exec("CREATE TABLE IF NOT EXISTS recurring_rules (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
-        category TEXT NOT NULL,
         space TEXT NOT NULL CHECK(space IN ('WHOLE','HALF_A','HALF_B')),
         dow INTEGER NOT NULL,
         start_min INTEGER NOT NULL,
@@ -113,6 +173,9 @@ function migrate(PDO $db): void {
     add_column_if_missing($db, 'bookings', 'edit_token', 'TEXT');
     add_column_if_missing($db, 'bookings', 'note', "TEXT NOT NULL DEFAULT ''");
     add_column_if_missing($db, 'pending_bookings', 'note', "TEXT NOT NULL DEFAULT ''");
+    drop_category_from_bookings($db);
+    drop_category_from_pending($db);
+    drop_category_from_recurring($db);
 
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('require_email_verification', '1')")->execute();
     $db->prepare("INSERT OR IGNORE INTO settings(key, value) VALUES ('max_advance_booking_days', '30')")->execute();
